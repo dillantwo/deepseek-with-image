@@ -4,6 +4,7 @@ import axios from 'axios';
 import Image from 'next/image'
 import React, { useState, useRef } from 'react'
 import toast from 'react-hot-toast';
+import ChatflowSelector from './ChatflowSelector';
 
 const PromptBox = ({setIsLoading, isLoading}) => {
 
@@ -13,7 +14,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
     const [previewModal, setPreviewModal] = useState({ isOpen: false, image: null });
     const fileInputRef = useRef(null);
     const textareaRef = useRef(null);
-    const {user, chats, setChats, selectedChat, setSelectedChat} = useAppContext();
+    const {user, chats, setChats, selectedChat, setSelectedChat, selectedChatflow, setSelectedChatflow} = useAppContext();
 
     const handleKeyDown = (e)=>{
         if(e.key === "Enter" && !e.shiftKey){
@@ -120,6 +121,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
             e.preventDefault();
             if(!user) return toast.error('Login to send message');
             if(isLoading) return toast.error('Wait for the previous prompt response');
+            if(!selectedChatflow) return toast.error('Please select a chatflow first');
 
             setIsLoading(true)
             setPrompt("")
@@ -153,7 +155,8 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         const sendData = {
             chatId: selectedChat._id,
             prompt,
-            images: uploadedImages.length > 0 ? uploadedImages.map(img => img.url) : undefined
+            images: uploadedImages.length > 0 ? uploadedImages.map(img => img.url) : undefined,
+            chatflowId: selectedChatflow?.id // 添加选中的chatflow ID
         };
 
         const {data} = await axios.post('/api/chat/ai', sendData)
@@ -205,6 +208,20 @@ const PromptBox = ({setIsLoading, isLoading}) => {
 
   return (
     <div className={`w-full ${selectedChat?.messages.length > 0 ? "max-w-3xl" : "max-w-2xl"} transition-all`}>
+      {/* Chatflow选择器 */}
+      <div className="mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-sm text-gray-400">Choose AI Model:</span>
+          {!selectedChatflow && (
+            <span className="text-xs text-orange-400">⚠️ Please select a chatflow</span>
+          )}
+        </div>
+        <ChatflowSelector 
+          selectedChatflow={selectedChatflow}
+          onChatflowChange={setSelectedChatflow}
+        />
+      </div>
+
       {/* 图片预览区域 */}
       {uploadedImages.length > 0 && (
         <div className="mb-3 p-3 bg-[#404045] rounded-2xl">
@@ -307,8 +324,16 @@ const PromptBox = ({setIsLoading, isLoading}) => {
               <Image className='w-4' src={assets.pin_icon} alt='Upload Image'/>
             </button>
             
-            <button className={`${prompt || uploadedImages.length > 0 ? "bg-primary" : "bg-[#71717a]"} rounded-full p-2 cursor-pointer`}>
-                <Image className='w-3.5 aspect-square' src={prompt || uploadedImages.length > 0 ? assets.arrow_icon : assets.arrow_icon_dull} alt=''/>
+            <button 
+                className={`${(prompt || uploadedImages.length > 0) && selectedChatflow ? "bg-primary" : "bg-[#71717a]"} rounded-full p-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
+                disabled={!selectedChatflow}
+                title={!selectedChatflow ? "Please select a chatflow first" : ""}
+            >
+                <Image 
+                    className='w-3.5 aspect-square' 
+                    src={(prompt || uploadedImages.length > 0) && selectedChatflow ? assets.arrow_icon : assets.arrow_icon_dull} 
+                    alt=''
+                />
             </button>
             </div>
         </div>

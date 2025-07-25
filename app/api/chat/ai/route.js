@@ -6,14 +6,18 @@ import { NextResponse } from "next/server";
 // import { AzureOpenAI } from "openai";
 
 // Flowise API configuration
-const FLOWISE_API_URL = "http://104.214.171.154/api/v1/prediction/467dc088-1ac6-4301-a19e-401c393898f9";
+const FLOWISE_BASE_URL = "http://104.214.171.154";
+const FLOWISE_API_KEY = "md4Ld6j8P691uX38boDURvAaTYDTnyABgBhi9DcEbEU";
 
 // Helper function to query Flowise API
-async function queryFlowise(data) {
+async function queryFlowise(data, chatflowId) {
+    const FLOWISE_API_URL = `${FLOWISE_BASE_URL}/api/v1/prediction/${chatflowId}`;
+    
     const response = await fetch(FLOWISE_API_URL, {
         method: "POST",
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            ...(FLOWISE_API_KEY && { "Authorization": `Bearer ${FLOWISE_API_KEY}` })
         },
         body: JSON.stringify(data)
     });
@@ -51,10 +55,10 @@ export async function POST(req){
     try {
         const {userId} = getAuth(req)
 
-        // Extract chatId, prompt, and images from the request body
-        const { chatId, prompt, images } = await req.json();
+        // Extract chatId, prompt, images, and chatflowId from the request body
+        const { chatId, prompt, images, chatflowId } = await req.json();
 
-        console.log('Received request:', { userId, chatId, prompt, imagesCount: images?.length });
+        console.log('Received request:', { userId, chatId, prompt, imagesCount: images?.length, chatflowId });
         
         // 如果有图片，打印图片信息用于调试
         if (images && images.length > 0) {
@@ -78,6 +82,13 @@ export async function POST(req){
             return NextResponse.json({
                 success: false,
                 message: "Prompt is required",
+              });
+        }
+
+        if(!chatflowId){
+            return NextResponse.json({
+                success: false,
+                message: "Chatflow selection is required",
               });
         }
 
@@ -159,10 +170,11 @@ export async function POST(req){
         console.log('Sending request to Flowise:', {
             question: requestData.question,
             uploadsCount: requestData.uploads?.length || 0,
-            fullRequest: JSON.stringify(requestData)
+            fullRequest: JSON.stringify(requestData),
+            chatflowId: chatflowId
         });
         
-        const completion = await queryFlowise(requestData);
+        const completion = await queryFlowise(requestData, chatflowId);
 
         console.log('Flowise response type:', typeof completion);
         console.log('Flowise response keys:', completion ? Object.keys(completion) : 'null');
