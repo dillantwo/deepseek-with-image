@@ -19,7 +19,17 @@ async function queryFlowise(data) {
     });
     
     if (!response.ok) {
-        throw new Error(`Flowise API error: ${response.status} ${response.statusText}`);
+        // 获取详细的错误信息
+        let errorMessage = `Flowise API error: ${response.status} ${response.statusText}`;
+        try {
+            const errorBody = await response.text();
+            if (errorBody) {
+                errorMessage += ` - ${errorBody}`;
+            }
+        } catch (e) {
+            // 忽略解析错误响应体的错误
+        }
+        throw new Error(errorMessage);
     }
     
     const result = await response.json();
@@ -45,6 +55,17 @@ export async function POST(req){
         const { chatId, prompt, images } = await req.json();
 
         console.log('Received request:', { userId, chatId, prompt, imagesCount: images?.length });
+        
+        // 如果有图片，打印图片信息用于调试
+        if (images && images.length > 0) {
+            console.log('Received images:', images.map((img, index) => ({
+                index,
+                isBase64: typeof img === 'string' && img.startsWith('data:'),
+                isUrl: typeof img === 'string' && (img.startsWith('http') || img.startsWith('blob:')),
+                type: typeof img,
+                preview: typeof img === 'string' ? img.substring(0, 50) + '...' : 'object'
+            })));
+        }
 
         if(!userId){
             return NextResponse.json({
@@ -76,67 +97,69 @@ export async function POST(req){
             role: "user",
             content: prompt,
             timestamp: Date.now(),
-            ...(images && images.length > 0 && { images: images.map((img, index) => ({
-                name: `Image ${index + 1}`,
-                url: img
-            }))})
+            // 处理图片信息：如果images是字符串数组（URL），转换为对象格式
+            ...(images && images.length > 0 && { 
+                images: images.map((img, index) => {
+                    if (typeof img === 'string') {
+                        // 如果是字符串（URL），转换为对象格式
+                        return {
+                            name: `Image ${index + 1}`,
+                            url: img
+                        };
+                    } else if (typeof img === 'object' && img.url) {
+                        // 如果已经是对象格式，直接使用
+                        return img;
+                    } else {
+                        // 备用处理
+                        return {
+                            name: `Image ${index + 1}`,
+                            url: img
+                        };
+                    }
+                })
+            })
         };
 
         data.messages.push(userPrompt);
 
-        // Prepare messages for API call
-        let apiMessages = [];
-        
-        if (images && images.length > 0) {
-            // If images are present, create a message with both text and images
-            const content = [
-                { type: "text", text: prompt }
-            ];
-            
-            // Add each image to the content
-            images.forEach(imageUrl => {
-                content.push({
-                    type: "image_url",
-                    image_url: {
-                        url: imageUrl,
-                        detail: "high"
-                    }
-                });
-            });
-            
-            apiMessages = [{ role: "user", content: content }];
-        } else {
-            // Text-only message
-            apiMessages = [{ role: "user", content: prompt }];
-        }
+        // Prepare chat history for Flowise API
+        // Flowise 可能需要历史消息来保持对话上下文
+        const chatHistory = data.messages.map(msg => ({
+            role: msg.role,
+            content: msg.content,
+            ...(msg.images && { images: msg.images })
+        }));
 
         // Call the Flowise API to get a chat completion
+        // 先测试最简单的请求格式
         const requestData = {
-            question: prompt,
-            // 如果有图片，按照正确的格式传递
-            ...(images && images.length > 0 && { 
-                uploads: images.map((img, index) => {
-                    const upload = {
-                        data: img, // 应该是 base64 字符串或 URL
-                        type: img.startsWith('data:') ? 'file' : 'url', // 根据数据格式判断类型
-                        name: `image_${index + 1}.png`, // 给图片一个名称
-                        mime: img.startsWith('data:image/') ? img.split(';')[0].split(':')[1] : 'image/png' // 从 data URL 中提取 MIME 类型
-                    };
-                    console.log(`Upload ${index + 1}:`, {
-                        type: upload.type,
-                        name: upload.name,
-                        mime: upload.mime,
-                        dataLength: upload.data.length,
-                        dataPrefix: upload.data.substring(0, 50) + '...'
-                    });
-                    return upload;
-                })
-            })
+            question: prompt
         };
+        
+        // 只有在有图片时才添加uploads字段
+        if (images && images.length > 0) {
+            requestData.uploads = images.map((img, index) => {
+                const upload = {
+                    data: img, // 应该是 base64 字符串或 URL
+                    type: img.startsWith('data:') ? 'file' : 'url', // 根据数据格式判断类型
+                    name: `image_${index + 1}.png`, // 给图片一个名称
+                    mime: img.startsWith('data:image/') ? img.split(';')[0].split(':')[1] : 'image/png' // 从 data URL 中提取 MIME 类型
+                };
+                console.log(`Upload ${index + 1}:`, {
+                    type: upload.type,
+                    name: upload.name,
+                    mime: upload.mime,
+                    dataLength: upload.data.length,
+                    dataPrefix: upload.data.substring(0, 50) + '...'
+                });
+                return upload;
+            });
+        }
         
         console.log('Sending request to Flowise:', {
             question: requestData.question,
-            uploadsCount: requestData.uploads?.length || 0
+            uploadsCount: requestData.uploads?.length || 0,
+            fullRequest: JSON.stringify(requestData)
         });
         
         const completion = await queryFlowise(requestData);

@@ -8,6 +8,12 @@ const ChatSchema = new mongoose.Schema(
                 role: {type: String, required: true},
                 content: {type: String, required: true},
                 timestamp: {type: Number, required: true},
+                images: [
+                    {
+                        name: {type: String},
+                        url: {type: String}
+                    }
+                ]
             },
         ],
         userId: {type: String, required: true},
