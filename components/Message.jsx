@@ -2,6 +2,8 @@ import { assets } from '@/assets/assets'
 import Image from 'next/image'
 import React, { useEffect, useState } from 'react'
 import Markdown from 'react-markdown'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
 import Prism from 'prismjs'
 import toast from 'react-hot-toast'
 
@@ -13,6 +15,30 @@ const Message = ({role, content, images}) => {
     useEffect(()=>{
         Prism.highlightAll()
     }, [content])
+
+    // 专门处理LaTeX数学公式格式
+    const processMathContent = (text) => {
+        if (!text) return text;
+        
+        let processed = text
+            // 处理 \\( ... \\) 格式 (行内公式)
+            .replace(/\\\\\(/g, '$').replace(/\\\\\)/g, '$')
+            // 处理 \\[ ... \\] 格式 (块级公式)
+            .replace(/\\\\\[/g, '$$').replace(/\\\\\]/g, '$$')
+            // 处理单个反斜杠格式 \( ... \) 
+            .replace(/\\\(/g, '$').replace(/\\\)/g, '$')
+            // 处理单个反斜杠格式 \[ ... \]
+            .replace(/\\\[/g, '$$').replace(/\\\]/g, '$$');
+            
+        // 调试：如果内容被修改了，在控制台输出
+        if (processed !== text) {
+            console.log('Math content processed:', { original: text, processed });
+        }
+            
+        return processed;
+    };
+
+    const processedContent = processMathContent(content);
 
     const copyMessage = ()=>{
         navigator.clipboard.writeText(content)
@@ -53,6 +79,11 @@ const Message = ({role, content, images}) => {
     // 检查内容是否包含HTML代码
     const hasHTMLCode = (content) => {
         return /```html[\s\S]*?```/i.test(content);
+    };
+
+    // 检查内容是否包含数学公式
+    const hasMathContent = (content) => {
+        return /\\[\(\[][\s\S]*?\\[\)\]]/.test(content);
     };
 
   return (
@@ -199,7 +230,12 @@ const Message = ({role, content, images}) => {
                     <>
                     <Image src={assets.reshot_icon} alt='' className='h-9 w-9 p-1 border border-white/15 rounded-full'/>
                     <div className='space-y-4 w-full'>
-                        <Markdown>{content}</Markdown>
+                        <Markdown 
+                            remarkPlugins={[remarkMath]}
+                            rehypePlugins={[rehypeKatex]}
+                        >
+                            {processedContent}
+                        </Markdown>
                         </div>
                     </>
                 )

@@ -25,3 +25,24 @@ code{
 pre{
   border-radius: 10px !important;
 }
+
+/* KaTeX 数学公式样式 */
+.katex {
+  font-size: 1.6em !important;
+}
+
+.katex-display {
+  font-size: 1.8em !important;
+  margin: 1.5em 0 !important;
+}
+
+/* 行内数学公式 */
+.katex-mathml {
+  font-size: 1.4em !important;
+}
+
+/* 块级数学公式额外样式 */
+.katex-display > .katex {
+  font-size: 2em !important;
+  text-align: center !important;
+}
