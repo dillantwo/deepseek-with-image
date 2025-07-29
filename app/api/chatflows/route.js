@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
 // Flowise API配置
-const FLOWISE_BASE_URL = "http://104.214.171.154";
-const FLOWISE_API_KEY = "md4Ld6j8P691uX38boDURvAaTYDTnyABgBhi9DcEbEU";
+const FLOWISE_BASE_URL = process.env.FLOWISE_BASE_URL;
+const FLOWISE_API_KEY = process.env.FLOWISE_API_KEY;
 
 export async function GET() {
     try {
