@@ -8,12 +8,12 @@ import ChatLabel from './ChatLabel'
 const Sidebar = ({expand, setExpand}) => {
 
     const {openSignIn} = useClerk()
-    const {user, chats, createNewChat} = useAppContext()
+    const {user, filteredChats, selectedChatflow, createNewChat} = useAppContext()
     const [openMenu, setOpenMenu] = useState({id: 0, open: false})
 
   return (
-    <div className={`flex flex-col justify-between bg-[#212327] pt-7 transition-all z-50 max-md:absolute max-md:h-screen ${expand ? 'p-4 w-64' : 'md:w-20 w-0 max-md:overflow-hidden'}`}>
-      <div>
+    <div className={`flex flex-col justify-between bg-[#212327] pt-7 transition-all z-50 max-md:absolute max-md:h-screen overflow-hidden ${expand ? 'p-4 w-64 min-w-64' : 'md:w-20 w-0 max-md:overflow-hidden'}`}>
+      <div className="flex flex-col min-h-0 flex-1">
         <div className={`flex ${expand ? "flex-row gap-10" : "flex-col items-center gap-8"}`}>
             <Image className={expand ? "w-36" : "w-10"} src={expand ? assets.logo_text : assets.reshot_icon} alt=''/>
 
@@ -37,37 +37,57 @@ const Sidebar = ({expand, setExpand}) => {
             {expand && <p className='text-white text font-medium'>New chat</p>}
         </button>
 
-        <div className={`mt-8 text-white/25 text-sm ${expand ? "block" : "hidden"}`}>
-            <p className='my-1'>Recents</p>
-            {chats.map((chat, index)=> <ChatLabel key={index} name={chat.name} id={chat._id} openMenu={openMenu} setOpenMenu={setOpenMenu}/>)}
+        <div className={`mt-8 text-white/25 text-sm flex-1 flex flex-col min-h-0 ${expand ? "block" : "hidden"}`}>
+            {/* 显示当前 chatflow 名称 */}
+            {selectedChatflow && (
+                <div className="mb-4 p-3 bg-[#2a2b2f] rounded-lg border border-gray-600/30 flex-shrink-0">
+                    <div className="flex items-center gap-2 mb-1">
+                        <div className={`w-2 h-2 rounded-full ${selectedChatflow.deployed ? 'bg-green-500' : 'bg-gray-500'}`} />
+                        <p className="text-white text-sm font-medium truncate">{selectedChatflow.name}</p>
+                    </div>
+                    <p className="text-xs text-gray-400 truncate">{selectedChatflow.category}</p>
+                </div>
+            )}
             
+            <p className='my-1 flex-shrink-0'>
+                {selectedChatflow ? `${selectedChatflow.name} Chats` : 'Recent Chats'}
+            </p>
+            <div className="flex-1 chat-list-container min-h-0 pr-2">
+                {filteredChats.length > 0 ? (
+                    filteredChats.map((chat, index)=> 
+                        <ChatLabel key={index} name={chat.name} id={chat._id} openMenu={openMenu} setOpenMenu={setOpenMenu}/>
+                    )
+                ) : (
+                    <div className="text-center py-8">
+                        <p className="text-gray-400 text-sm mb-2">
+                            {selectedChatflow 
+                                ? `No chats for ${selectedChatflow.name}` 
+                                : 'No chats available'
+                            }
+                        </p>
+                        <p className="text-gray-500 text-xs">
+                            {selectedChatflow 
+                                ? 'Start a new conversation with this chatflow' 
+                                : 'Create your first chat to get started'
+                            }
+                        </p>
+                    </div>
+                )}
+            </div>
         </div>
       </div>
 
-    <div>
-        <div className={`flex items-center cursor-pointer group relative ${expand ? "gap-1 text-white/80 text-sm p-2.5 border border-primary rounded-lg hover:bg-white/10 cursor-pointer" : "h-10 w-10 mx-auto hover:bg-gray-500/30 rounded-lg"}`}>
-            <Image className={expand ? "w-5" : "w-6.5 mx-auto"} src={expand ? assets.phone_icon : assets.phone_icon_dull} alt=''/>
-            <div className={`absolute -top-60 pb-8 ${!expand && "-right-40"} opacity-0 group-hover:opacity-100 hidden group-hover:block transition`}>
-                <div className='relative w-max bg-black text-white text-sm p-3 rounded-lg shadow-lg'>
-                    <Image src={assets.qrcode} alt='' className='w-44'/>
-                    <p>Scan to get DeepSeek App</p>
-                    <div className={`w-3 h-3 absolute bg-black rotate-45 ${expand ? "right-1/2" : "left-4"} -bottom-1.5`}></div>
-                </div>
-            </div>
-            {expand && <> <span>Get App</span> <Image alt='' src={assets.new_icon}/> </>}
-    </div>
-
-    <div onClick={user ? null : openSignIn}
-     className={`flex items-center ${expand ? ' hover:bg-white/10 rounded-lg' : 'justify-center w-full'} gap-3 text-white/60 text-sm p-2 mt-2 cursor-pointer`}>
-        {
-            user ? <UserButton/>
-            : <Image src={assets.profile_icon} alt='' className='w-7'/>
-        }
-        
-        {expand && <span>My Profile</span>}
-    </div>
-
+    <div className="flex-shrink-0">
+        <div onClick={user ? null : openSignIn}
+         className={`flex items-center ${expand ? ' hover:bg-white/10 rounded-lg' : 'justify-center w-full'} gap-3 text-white/60 text-sm p-2 cursor-pointer`}>
+            {
+                user ? <UserButton/>
+                : <Image src={assets.profile_icon} alt='' className='w-7'/>
+            }
+            
+            {expand && <span>My Profile</span>}
         </div>
+    </div>
 
     </div>
   )

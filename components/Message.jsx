@@ -92,7 +92,7 @@ const Message = ({role, content, images}) => {
                     <div className="border border-gray-300 rounded-lg overflow-hidden bg-white">
                         <div className="bg-gray-100 px-4 py-2 border-b border-gray-300 flex items-center justify-between">
                             <span className="text-sm font-medium text-gray-700">
-                                {htmlViewMode === 'rendered' ? 'HTML Rendered Result' : 'HTML Code'}
+                                {htmlViewMode === 'rendered' ? '' : 'HTML Code'}
                             </span>
                             <div className="flex gap-2">
                                 <button

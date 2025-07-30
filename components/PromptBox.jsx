@@ -1,10 +1,10 @@
 import { assets } from '@/assets/assets'
 import { useAppContext } from '@/context/AppContext';
+import { useAuth } from '@clerk/nextjs';
 import axios from 'axios';
 import Image from 'next/image'
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import toast from 'react-hot-toast';
-import ChatflowSelector from './ChatflowSelector';
 
 const PromptBox = ({setIsLoading, isLoading}) => {
 
@@ -12,9 +12,18 @@ const PromptBox = ({setIsLoading, isLoading}) => {
     const [uploadedImages, setUploadedImages] = useState([]);
     const [isDragging, setIsDragging] = useState(false);
     const [previewModal, setPreviewModal] = useState({ isOpen: false, image: null });
+    const streamingRef = useRef(false); // 跟踪streaming状态
     const fileInputRef = useRef(null);
     const textareaRef = useRef(null);
-    const {user, chats, setChats, selectedChat, setSelectedChat, selectedChatflow, setSelectedChatflow} = useAppContext();
+    const {user, chats, setChats, selectedChat, setSelectedChat, selectedChatflow, setSelectedChatflow, createNewChat} = useAppContext();
+    const {getToken} = useAuth();
+
+    // 清理streaming状态
+    useEffect(() => {
+        return () => {
+            streamingRef.current = false;
+        };
+    }, []);
 
     const handleKeyDown = (e)=>{
         if(e.key === "Enter" && !e.shiftKey){
@@ -115,20 +124,83 @@ const PromptBox = ({setIsLoading, isLoading}) => {
     };
 
     const sendPrompt = async (e)=>{
+        e.preventDefault();
+        
         const promptCopy = prompt;
 
         try {
-            e.preventDefault();
             if(!user) return toast.error('Login to send message');
             if(isLoading) return toast.error('Wait for the previous prompt response');
-            if(!selectedChatflow) return toast.error('Please select a chatflow first');
+            if(!promptCopy.trim()) return; // 如果没有输入内容，不执行任何操作
+            
+            // 如果没有选中聊天，自动创建一个新聊天
+            let currentChat = selectedChat;
+            if(!currentChat) {
+                setIsLoading(true);
+                setPrompt(""); // 清空输入框，防止重复提交
+                
+                try {
+                    // 创建新聊天
+                    const token = await getToken();
+                    const chatData = selectedChatflow ? { chatflowId: selectedChatflow.id } : {};
+                    
+                    const createResponse = await axios.post('/api/chat/create', chatData, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    
+                    if (!createResponse.data.success) {
+                        setIsLoading(false);
+                        setPrompt(promptCopy); // 恢复输入内容
+                        return toast.error('Failed to create new chat. Please try again.');
+                    }
+                    
+                    // 获取新创建的聊天
+                    const chatsResponse = await axios.get('/api/chat/get', {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    
+                    if (chatsResponse.data.success && chatsResponse.data.data.length > 0) {
+                        // 找到刚创建的聊天（最新的）
+                        const sortedChats = chatsResponse.data.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                        let newChat;
+                        
+                        if (selectedChatflow) {
+                            // 如果有选中的 chatflow，找到属于该 chatflow 的最新聊天
+                            newChat = sortedChats.find(chat => chat.chatflowId === selectedChatflow.id);
+                        } else {
+                            // 如果没有选中 chatflow，取最新的聊天
+                            newChat = sortedChats[0];
+                        }
+                        
+                        if (newChat) {
+                            currentChat = newChat;
+                            // 更新状态但不等待，继续发送消息
+                            setChats(chatsResponse.data.data);
+                            setSelectedChat(newChat);
+                        } else {
+                            setIsLoading(false);
+                            setPrompt(promptCopy);
+                            return toast.error('Failed to find created chat.');
+                        }
+                    } else {
+                        setIsLoading(false);
+                        setPrompt(promptCopy);
+                        return toast.error('Failed to retrieve chat after creation.');
+                    }
+                } catch (createError) {
+                    setIsLoading(false);
+                    setPrompt(promptCopy);
+                    return toast.error('Failed to create new chat. Please try again.');
+                }
+            } else {
+                setIsLoading(true);
+                setPrompt("");
+            }
 
-            setIsLoading(true)
-            setPrompt("")
-
+            // 现在发送消息
             const userPrompt = {
                 role: "user",
-                content: prompt,
+                content: promptCopy,
                 timestamp: Date.now(),
                 images: uploadedImages.length > 0 ? uploadedImages.map(img => ({
                     name: img.name,
@@ -137,15 +209,13 @@ const PromptBox = ({setIsLoading, isLoading}) => {
             }
 
             // saving user prompt in chats array
-
-            setChats((prevChats)=> prevChats.map((chat)=> chat._id === selectedChat._id ?
+            setChats((prevChats)=> prevChats.map((chat)=> chat._id === currentChat._id ?
              {
                 ...chat,
                 messages: [...chat.messages, userPrompt]
             }: chat
         ))
         // saving user prompt in selected chat
-
         setSelectedChat((prev)=> ({
             ...prev,
             messages: [...prev.messages, userPrompt]
@@ -153,17 +223,19 @@ const PromptBox = ({setIsLoading, isLoading}) => {
 
         // 准备发送数据，包括图片
         const sendData = {
-            chatId: selectedChat._id,
-            prompt,
+            chatId: currentChat._id,
+            prompt: promptCopy,
             images: uploadedImages.length > 0 ? uploadedImages.map(img => img.url) : undefined,
-            chatflowId: selectedChatflow?.id // 添加选中的chatflow ID
         };
+        
+        // 只有在选择了 chatflow 时才添加 chatflowId
+        if (selectedChatflow?.id) {
+            sendData.chatflowId = selectedChatflow.id;
+        }
 
         const {data} = await axios.post('/api/chat/ai', sendData)
 
         if(data.success){
-            setChats((prevChats)=>prevChats.map((chat)=>chat._id === selectedChat._id ? {...chat, messages: [...chat.messages, data.data]} : chat))
-
             const message = data.data.content;
             const messageTokens = message.split(" ");
             let assistantMessage = {
@@ -172,24 +244,102 @@ const PromptBox = ({setIsLoading, isLoading}) => {
                 timestamp: Date.now(),
             }
 
-            setSelectedChat((prev) => ({
-                ...prev,
-                messages: [...prev.messages, assistantMessage],
-            }))
-
-            for (let i = 0; i < messageTokens.length; i++) {
-               setTimeout(()=>{
-                assistantMessage.content = messageTokens.slice(0, i + 1).join(" ");
-                setSelectedChat((prev)=>{
-                    const updatedMessages = [
-                        ...prev.messages.slice(0, -1),
-                        assistantMessage
-                    ]
-                    return {...prev, messages: updatedMessages}
-                })
-               }, i * 100)
-                
+            // 如果后端返回了更新的聊天名称，更新相关状态
+            if(data.chatName && data.chatName !== currentChat.name) {
+                // 更新 chats 数组中的聊天名称
+                setChats((prevChats)=>prevChats.map((chat)=>
+                    chat._id === currentChat._id 
+                        ? {...chat, messages: [...chat.messages, data.data], name: data.chatName} 
+                        : chat
+                ))
+                // 更新当前选中的聊天名称
+                setSelectedChat((prev) => ({
+                    ...prev,
+                    name: data.chatName,
+                    messages: [...prev.messages, assistantMessage],
+                }))
+            } else {
+                // 只更新消息，不更新名称
+                setChats((prevChats)=>prevChats.map((chat)=>chat._id === currentChat._id ? {...chat, messages: [...chat.messages, data.data]} : chat))
+                setSelectedChat((prev) => ({
+                    ...prev,
+                    messages: [...prev.messages, assistantMessage],
+                }))
             }
+
+            // 优化的streaming效果 - 修复state更新问题和添加清理机制
+            const streamMessage = (fullContent) => {
+                streamingRef.current = true; // 开始streaming
+                const chars = fullContent.split('');
+                let currentIndex = 0;
+                const baseSpeed = 20; // 稍微慢一点，减少频繁更新
+                
+                const typeNextChunk = () => {
+                    if (!streamingRef.current || currentIndex >= chars.length) {
+                        streamingRef.current = false;
+                        return;
+                    }
+                    
+                    // 每次显示2-5个字符，减少更新频率
+                    let chunkSize = 2;
+                    const remainingChars = chars.length - currentIndex;
+                    
+                    if (remainingChars > 200) {
+                        chunkSize = Math.min(5, remainingChars); // 长内容快速显示
+                    } else if (remainingChars > 50) {
+                        chunkSize = Math.min(3, remainingChars); // 中等内容适中显示
+                    } else {
+                        chunkSize = Math.min(2, remainingChars); // 短内容稍慢显示
+                    }
+                    
+                    currentIndex += chunkSize;
+                    const currentContent = chars.slice(0, currentIndex).join('');
+                    
+                    // 使用requestAnimationFrame来避免频繁的state更新
+                    requestAnimationFrame(() => {
+                        if (!streamingRef.current) return;
+                        
+                        setSelectedChat((prev) => {
+                            if (!prev) return prev;
+                            
+                            const updatedMessages = [
+                                ...prev.messages.slice(0, -1),
+                                { ...assistantMessage, content: currentContent }
+                            ];
+                            return { ...prev, messages: updatedMessages };
+                        });
+                    });
+                    
+                    if (currentIndex < chars.length && streamingRef.current) {
+                        // 动态速度调整
+                        let delay = baseSpeed;
+                        const currentChar = chars[currentIndex - 1];
+                        
+                        if (currentChar === '.' || currentChar === '!' || currentChar === '?') {
+                            delay = baseSpeed * 2; // 句号后短暂停顿
+                        } else if (currentChar === ',' || currentChar === ';') {
+                            delay = baseSpeed * 1.5; // 逗号后轻微停顿
+                        } else if (currentChar === ' ') {
+                            delay = baseSpeed * 0.8; // 空格稍快
+                        }
+                        
+                        // 代码块快速显示
+                        if (currentContent.includes('```') && !currentContent.trim().endsWith('```')) {
+                            delay = baseSpeed * 0.5;
+                        }
+                        
+                        setTimeout(typeNextChunk, delay);
+                    } else {
+                        streamingRef.current = false;
+                    }
+                };
+                
+                // 开始显示
+                setTimeout(typeNextChunk, 100); // 初始延迟
+            };
+            
+            // 开始streaming
+            streamMessage(message);
 
             // 清空上传的图片
             setUploadedImages([]);
@@ -208,20 +358,6 @@ const PromptBox = ({setIsLoading, isLoading}) => {
 
   return (
     <div className={`w-full ${selectedChat?.messages.length > 0 ? "max-w-3xl" : "max-w-2xl"} transition-all`}>
-      {/* Chatflow选择器 */}
-      <div className="mb-4">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-sm text-gray-400">Choose AI Model:</span>
-          {!selectedChatflow && (
-            <span className="text-xs text-orange-400">⚠️ Please select a chatflow</span>
-          )}
-        </div>
-        <ChatflowSelector 
-          selectedChatflow={selectedChatflow}
-          onChatflowChange={setSelectedChatflow}
-        />
-      </div>
-
       {/* 图片预览区域 */}
       {uploadedImages.length > 0 && (
         <div className="mb-3 p-3 bg-[#404045] rounded-2xl">

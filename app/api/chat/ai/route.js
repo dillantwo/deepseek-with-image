@@ -3,11 +3,37 @@ import connectDB from "@/config/db";
 import Chat from "@/models/Chat";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 // import { AzureOpenAI } from "openai";
 
 // Flowise API configuration
 const FLOWISE_BASE_URL = process.env.FLOWISE_BASE_URL;
 const FLOWISE_API_KEY = process.env.FLOWISE_API_KEY;
+
+// Function to create session ID based on user_id and chat_id
+// This ensures the same chat conversation always uses the same session ID
+function createSessionId(userId, chatId) {
+    // Create a namespace UUID (version 5)
+    const namespace = "b6Vzr2ZBar8Ssb34euKp9VCm_n23DzBJMm0Baa7bphU";
+    
+    // Combine user_id and chat_id (no timestamp to ensure consistency)
+    const seed = `${userId}:${chatId}`;
+    
+    // Generate a UUID based on the namespace and seed using crypto.createHash
+    const crypto = require('crypto');
+    const hash = crypto.createHash('sha1').update(namespace + seed).digest('hex');
+    
+    // Format as UUID v5
+    const uuid = [
+        hash.substr(0, 8),
+        hash.substr(8, 4),
+        '5' + hash.substr(13, 3), // Version 5
+        ((parseInt(hash.substr(16, 1), 16) & 0x3) | 0x8).toString(16) + hash.substr(17, 3), // Variant
+        hash.substr(20, 12)
+    ].join('-');
+    
+    return uuid;
+}
 
 // Helper function to query Flowise API
 async function queryFlowise(data, chatflowId) {
@@ -92,6 +118,11 @@ export async function POST(req){
               });
         }
 
+        // Generate session ID for this chat conversation
+        // Same chat will always have the same session ID for context continuity
+        const sessionId = createSessionId(userId, chatId);
+        console.log('Generated session ID for chat:', sessionId);
+
         // Find the chat document in the database based on userId and chatId
         await connectDB()
         const data = await Chat.findOne({userId, _id: chatId})
@@ -133,6 +164,14 @@ export async function POST(req){
 
         data.messages.push(userPrompt);
 
+        // 如果这是第一条用户消息（聊天刚创建），则将提问设为聊天名称
+        const isFirstMessage = data.messages.filter(msg => msg.role === 'user').length === 1;
+        if (isFirstMessage && data.name === "New Chat") {
+            // 截取前50个字符作为聊天名称，避免名称过长
+            const chatName = prompt.length > 50 ? prompt.substring(0, 50) + "..." : prompt;
+            data.name = chatName;
+        }
+
         // Prepare chat history for Flowise API
         // Flowise 可能需要历史消息来保持对话上下文
         const chatHistory = data.messages.map(msg => ({
@@ -142,9 +181,14 @@ export async function POST(req){
         }));
 
         // Call the Flowise API to get a chat completion
+        // Use the session ID generated earlier
+        
         // 先测试最简单的请求格式
         const requestData = {
-            question: prompt
+            question: prompt,
+            overrideConfig: {
+                sessionId: sessionId
+            }
         };
         
         // 只有在有图片时才添加uploads字段
@@ -169,6 +213,7 @@ export async function POST(req){
         
         console.log('Sending request to Flowise:', {
             question: requestData.question,
+            sessionId: requestData.overrideConfig.sessionId,
             uploadsCount: requestData.uploads?.length || 0,
             fullRequest: JSON.stringify(requestData),
             chatflowId: chatflowId
@@ -209,7 +254,12 @@ export async function POST(req){
         data.messages.push(message);
         await data.save();
 
-        return NextResponse.json({success: true, data: message})
+        // 返回助手消息和更新的聊天信息（包括可能更新的名称）
+        return NextResponse.json({
+            success: true, 
+            data: message,
+            chatName: data.name // 返回更新后的聊天名称
+        })
     } catch (error) {
         console.error('Error in AI chat API:', error);
         return NextResponse.json({ 

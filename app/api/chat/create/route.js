@@ -10,12 +10,17 @@ export async function POST(req){
         if(!userId){
             return NextResponse.json({success: false, message: "User not authenticated",})
         }
-        // Prepare the chat data to be saved in the database
+        
+        // 获取请求体中的 chatflowId
+        const body = await req.json();
+        const { chatflowId } = body;
 
+        // Prepare the chat data to be saved in the database
         const chatData = {
             userId,
             messages: [],
-            name: "New Chat",
+            name: "New Chat", // 保持默认名称，将在第一次对话时更新
+            chatflowId: chatflowId || null, // 如果提供了 chatflowId，则关联到该 chatflow
         };
 
         // Connect to the database and create a new chat
