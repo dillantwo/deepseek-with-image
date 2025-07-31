@@ -93,3 +93,88 @@ pre{
   font-size: 2em !important;
   text-align: center !important;
 }
+
+/* Markdown表格美化样式 */
+.markdown-table-wrapper {
+  margin: 1.5rem 0;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* 表格基础样式 - 自动换行优化 */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  table-layout: auto;
+  word-break: break-word;
+}
+
+/* 表头样式 */
+table thead {
+  background-color: #f9fafb;
+}
+
+table th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e5e7eb;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+/* 表格内容样式 - 自动换行 */
+table td {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #1f2937;
+  border-bottom: 1px solid #e5e7eb;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  white-space: normal;
+  line-height: 1.6;
+  vertical-align: top;
+}
+
+/* 表格行悬停效果 */
+table tbody tr:hover {
+  background-color: #f9fafb;
+  transition: background-color 0.15s ease-in-out;
+}
+
+/* 最后一行去掉下边框 */
+table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 响应式设计 - 更紧凑的移动端样式 */
+@media (max-width: 640px) {
+  table th,
+  table td {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+  
+  table th {
+    font-size: 0.7rem;
+  }
+}
+
+/* 确保长单词和URL能够断行 */
+table th *,
+table td * {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}

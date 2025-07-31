@@ -12,11 +12,30 @@ const PromptBox = ({setIsLoading, isLoading}) => {
     const [uploadedImages, setUploadedImages] = useState([]);
     const [isDragging, setIsDragging] = useState(false);
     const [previewModal, setPreviewModal] = useState({ isOpen: false, image: null });
+    const [textareaHeight, setTextareaHeight] = useState('auto');
     const streamingRef = useRef(false); // 跟踪streaming状态
     const fileInputRef = useRef(null);
     const textareaRef = useRef(null);
     const {user, chats, setChats, selectedChat, setSelectedChat, selectedChatflow, setSelectedChatflow, createNewChat} = useAppContext();
     const {getToken} = useAuth();
+
+    // 预设的快捷短语
+    const quickPrompts = [
+        { text: 'Good', content: 'Good! ' },
+        { text: "Let's learn", content: "Let's learn！" },
+        { text: 'Please recommend', content: 'Please recommend！' }
+    ];
+
+    // 处理快捷短语点击
+    const handleQuickPrompt = (content) => {
+        setPrompt(content);
+        // 延迟调整高度，确保内容已更新
+        setTimeout(adjustTextareaHeight, 0);
+        // 自动聚焦到输入框
+        if (textareaRef.current) {
+            textareaRef.current.focus();
+        }
+    };
 
     // 清理streaming状态
     useEffect(() => {
@@ -24,6 +43,57 @@ const PromptBox = ({setIsLoading, isLoading}) => {
             streamingRef.current = false;
         };
     }, []);
+
+    // 自动调整textarea高度
+    const adjustTextareaHeight = () => {
+        const textarea = textareaRef.current;
+        if (textarea) {
+            // 重置高度以获得正确的scrollHeight
+            textarea.style.height = 'auto';
+            
+            // 计算内容高度
+            const scrollHeight = textarea.scrollHeight;
+            const lineHeight = 24; // 每行的高度
+            const minHeight = lineHeight * 2; // 最小2行
+            const maxHeight = lineHeight * 8; // 最大8行
+            
+            // 设置高度，但不超过最大值
+            const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
+            textarea.style.height = `${newHeight}px`;
+            
+            // 如果内容超过最大高度，启用滚动
+            if (scrollHeight > maxHeight) {
+                textarea.style.overflowY = 'auto';
+            } else {
+                textarea.style.overflowY = 'hidden';
+            }
+        }
+    };
+
+    // 重置textarea高度到初始状态
+    const resetTextareaHeight = () => {
+        const textarea = textareaRef.current;
+        if (textarea) {
+            textarea.style.height = '48px'; // 重置为最小高度
+            textarea.style.overflowY = 'hidden';
+        }
+    };
+
+    // 处理输入变化
+    const handleInputChange = (e) => {
+        setPrompt(e.target.value);
+        // 延迟调整高度，确保内容已更新
+        setTimeout(adjustTextareaHeight, 0);
+    };
+
+    // 在组件挂载后调整初始高度
+    useEffect(() => {
+        if (prompt === '') {
+            resetTextareaHeight();
+        } else {
+            adjustTextareaHeight();
+        }
+    }, [prompt]);
 
     const handleKeyDown = (e)=>{
         if(e.key === "Enter" && !e.shiftKey){
@@ -92,14 +162,24 @@ const PromptBox = ({setIsLoading, isLoading}) => {
     // 处理粘贴
     const handlePaste = (e) => {
         const items = e.clipboardData.items;
+        let hasImage = false;
+        
         for (let item of items) {
             if (item.type.startsWith('image/')) {
                 e.preventDefault();
                 const file = item.getAsFile();
                 if (file) {
                     handleImageUpload([file]);
+                    hasImage = true;
                 }
             }
+        }
+        
+        // 如果没有图片，说明是文本粘贴，需要调整高度
+        if (!hasImage) {
+            setTimeout(() => {
+                adjustTextareaHeight();
+            }, 0);
         }
     };
 
@@ -410,6 +490,29 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         </div>
       )}
 
+      {/* 快捷短语按钮 */}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        {quickPrompts.map((item, index) => (
+          <button
+            key={index}
+            type="button"
+            onClick={() => handleQuickPrompt(item.content)}
+            className="quick-prompt-btn flex items-center gap-1.5 px-4 py-2 bg-[#404045]/80 border border-gray-300/30 rounded-full hover:bg-gray-500/30 hover:border-gray-300/60 text-xs text-white/90 group min-w-[100px] justify-center"
+          >
+            {item.text === 'Good' && (
+              <Image src={assets.like_icon} alt="" className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
+            )}
+            {item.text === "Let's learn" && (
+              <Image src={assets.arrow_icon} alt="" className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
+            )}
+            {item.text === 'Please recommend' && (
+              <span className="text-sm opacity-70 group-hover:opacity-100 transition-opacity">😊</span>
+            )}
+            <span className="whitespace-nowrap font-medium">{item.text}</span>
+          </button>
+        ))}
+      </div>
+
       <form onSubmit={sendPrompt}
        className={`w-full bg-[#404045] p-4 rounded-3xl mt-4 transition-all ${isDragging ? 'border-2 border-blue-500 border-dashed' : ''}`}
        onDragOver={handleDragOver}
@@ -430,12 +533,20 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         ref={textareaRef}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
-        className='outline-none w-full resize-none overflow-hidden break-words bg-transparent'
-        rows={2}
-        placeholder={isDragging ? 'Drop to upload images...' : 'Type a message or drag images here...'} 
+        className='outline-none w-full resize-none bg-transparent leading-6 text-sm placeholder:text-gray-400 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent textarea-smooth'
+        style={{ 
+            minHeight: '48px', // 2行的最小高度
+            maxHeight: '192px', // 8行的最大高度
+            overflowY: 'hidden',
+            lineHeight: '24px',
+            wordWrap: 'break-word',
+            paddingRight: '8px' // 为滚动条留出空间
+        }}
+        placeholder={isDragging ? '拖拽图片到这里上传...' : '输入消息或拖拽图片到这里...'} 
         required 
-        onChange={(e)=> setPrompt(e.target.value)} 
-        value={prompt}/>
+        onChange={handleInputChange} 
+        value={prompt}
+        rows={2}/>
 
         <div className='flex items-center justify-between text-sm'>
             <div className='flex items-center gap-2'>

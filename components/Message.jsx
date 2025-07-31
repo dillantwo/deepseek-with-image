@@ -3,6 +3,7 @@ import Image from 'next/image'
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import Markdown from 'react-markdown'
 import remarkMath from 'remark-math'
+import remarkGfm from 'remark-gfm'
 import rehypeKatex from 'rehype-katex'
 import Prism from 'prismjs'
 import toast from 'react-hot-toast'
@@ -68,6 +69,46 @@ const Message = ({role, content, images}) => {
     // Optimize HTML code extraction with useMemo
     const htmlCode = useMemo(() => extractHTMLCode(content), [content, extractHTMLCode]);
 
+    // Custom components for better table styling
+    const markdownComponents = useMemo(() => ({
+        table: ({ children }) => (
+            <div className="my-6 rounded-lg border border-gray-200 shadow-sm">
+                <table className="w-full divide-y divide-gray-200 table-auto">
+                    {children}
+                </table>
+            </div>
+        ),
+        thead: ({ children }) => (
+            <thead className="bg-gray-50">
+                {children}
+            </thead>
+        ),
+        tbody: ({ children }) => (
+            <tbody className="bg-white divide-y divide-gray-200">
+                {children}
+            </tbody>
+        ),
+        tr: ({ children }) => (
+            <tr className="hover:bg-gray-50 transition-colors duration-150">
+                {children}
+            </tr>
+        ),
+        th: ({ children }) => (
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 last:border-r-0 break-words">
+                <div className="min-w-0 break-words whitespace-normal">
+                    {children}
+                </div>
+            </th>
+        ),
+        td: ({ children }) => (
+            <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200 last:border-r-0 break-words">
+                <div className="min-w-0 break-words whitespace-normal leading-relaxed">
+                    {children}
+                </div>
+            </td>
+        ),
+    }), []);
+
     // Render Markdown content, handle HTML code blocks - optimized with useMemo
     const renderedContent = useMemo(() => {
         if (htmlCode) {
@@ -81,8 +122,9 @@ const Message = ({role, content, images}) => {
                     {/* Content before HTML code block */}
                     {beforeHTML && (
                         <Markdown 
-                            remarkPlugins={[remarkMath]}
+                            remarkPlugins={[remarkMath, remarkGfm]}
                             rehypePlugins={[rehypeKatex]}
+                            components={markdownComponents}
                         >
                             {processMathContent(beforeHTML)}
                         </Markdown>
@@ -379,8 +421,9 @@ const Message = ({role, content, images}) => {
                     {/* Content after HTML code block */}
                     {afterHTML && (
                         <Markdown 
-                            remarkPlugins={[remarkMath]}
+                            remarkPlugins={[remarkMath, remarkGfm]}
                             rehypePlugins={[rehypeKatex]}
+                            components={markdownComponents}
                         >
                             {processMathContent(afterHTML)}
                         </Markdown>
@@ -392,15 +435,16 @@ const Message = ({role, content, images}) => {
             return (
                 <div className="space-y-4 w-full">
                     <Markdown 
-                        remarkPlugins={[remarkMath]}
+                        remarkPlugins={[remarkMath, remarkGfm]}
                         rehypePlugins={[rehypeKatex]}
+                        components={markdownComponents}
                     >
                         {processedContent}
                     </Markdown>
                 </div>
             );
         }
-    }, [content, htmlCode, htmlViewMode, processedContent]);
+    }, [content, htmlCode, htmlViewMode, processedContent, markdownComponents]);
 
   return (
     <div className='flex flex-col items-center w-full max-w-3xl text-base'>
