@@ -6,7 +6,6 @@ import menu_icon from "./menu_icon.svg";
 import search_icon from "./search_icon.svg";
 import profile_icon from "./profile_icon.svg";
 import copy_icon from "./copy_icon.svg";
-import deepthink_icon from "./deepthink_icon.svg";
 import chat_icon from "./chat_icon.svg";
 import dislike_icon from "./dislike_icon.svg";
 import like_icon from "./like_icon.svg";
@@ -33,7 +32,6 @@ export const assets = {
   search_icon,
   profile_icon,
   copy_icon,
-  deepthink_icon,
   chat_icon,
   dislike_icon,
   like_icon,

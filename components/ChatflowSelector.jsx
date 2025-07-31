@@ -12,7 +12,7 @@ const ChatflowSelector = ({ selectedChatflow, onChatflowChange }) => {
     // List of allowed chatflow IDs
     const allowedChatflowIds = [
         '4246f046-843f-473a-83bc-e196b73214cd', // Chinese
-        '41028bde-ac4a-4163-a1a2-a305b00d3879', // English
+        'b1ce49fc-53bb-49b1-aec4-4fa5d788d750', // English
         'bed35024-cc23-4d4e-b0c5-800cf4eab1e9'  // Water
     ];
 
