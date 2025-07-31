@@ -26,14 +26,26 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         { text: 'Please recommend', content: 'Please recommend！' }
     ];
 
-    // 处理快捷短语点击
-    const handleQuickPrompt = (content) => {
+    // 处理快捷短语点击 - 直接发送消息
+    const handleQuickPrompt = async (content) => {
+        // 创建一个模拟的事件对象用于sendPrompt函数
+        const mockEvent = {
+            preventDefault: () => {}
+        };
+        
+        // 临时设置prompt为快捷短语内容
+        const originalPrompt = prompt;
         setPrompt(content);
-        // 延迟调整高度，确保内容已更新
-        setTimeout(adjustTextareaHeight, 0);
-        // 自动聚焦到输入框
-        if (textareaRef.current) {
-            textareaRef.current.focus();
+        
+        // 等待一个微任务，确保状态更新
+        await new Promise(resolve => setTimeout(resolve, 0));
+        
+        // 直接调用sendPrompt发送消息
+        try {
+            await sendPromptWithContent(mockEvent, content);
+        } catch (error) {
+            // 如果发送失败，恢复原始prompt
+            setPrompt(originalPrompt);
         }
     };
 
@@ -207,11 +219,16 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         e.preventDefault();
         
         const promptCopy = prompt;
+        await sendPromptWithContent(e, promptCopy);
+    }
 
+    const sendPromptWithContent = async (e, contentToSend)=>{
+        e.preventDefault();
+        
         try {
             if(!user) return toast.error('Login to send message');
             if(isLoading) return toast.error('Wait for the previous prompt response');
-            if(!promptCopy.trim()) return; // 如果没有输入内容，不执行任何操作
+            if(!contentToSend.trim()) return; // 如果没有输入内容，不执行任何操作
             
             // 如果没有选中聊天，自动创建一个新聊天
             let currentChat = selectedChat;
@@ -230,7 +247,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
                     
                     if (!createResponse.data.success) {
                         setIsLoading(false);
-                        setPrompt(promptCopy); // 恢复输入内容
+                        setPrompt(contentToSend); // 恢复输入内容
                         return toast.error('Failed to create new chat. Please try again.');
                     }
                     
@@ -259,17 +276,17 @@ const PromptBox = ({setIsLoading, isLoading}) => {
                             setSelectedChat(newChat);
                         } else {
                             setIsLoading(false);
-                            setPrompt(promptCopy);
+                            setPrompt(contentToSend);
                             return toast.error('Failed to find created chat.');
                         }
                     } else {
                         setIsLoading(false);
-                        setPrompt(promptCopy);
+                        setPrompt(contentToSend);
                         return toast.error('Failed to retrieve chat after creation.');
                     }
                 } catch (createError) {
                     setIsLoading(false);
-                    setPrompt(promptCopy);
+                    setPrompt(contentToSend);
                     return toast.error('Failed to create new chat. Please try again.');
                 }
             } else {
@@ -280,7 +297,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
             // 现在发送消息
             const userPrompt = {
                 role: "user",
-                content: promptCopy,
+                content: contentToSend,
                 timestamp: Date.now(),
                 images: uploadedImages.length > 0 ? uploadedImages.map(img => ({
                     name: img.name,
@@ -304,7 +321,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         // 准备发送数据，包括图片
         const sendData = {
             chatId: currentChat._id,
-            prompt: promptCopy,
+            prompt: contentToSend,
             images: uploadedImages.length > 0 ? uploadedImages.map(img => img.url) : undefined,
         };
         
@@ -425,12 +442,12 @@ const PromptBox = ({setIsLoading, isLoading}) => {
             setUploadedImages([]);
         }else{
             toast.error(data.message);
-            setPrompt(promptCopy);
+            setPrompt(contentToSend);
         }
 
         } catch (error) {
             toast.error(error.message);
-            setPrompt(promptCopy);
+            setPrompt(contentToSend);
         } finally {
             setIsLoading(false);
         }
