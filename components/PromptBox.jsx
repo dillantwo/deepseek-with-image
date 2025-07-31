@@ -13,6 +13,8 @@ const PromptBox = ({setIsLoading, isLoading}) => {
     const [isDragging, setIsDragging] = useState(false);
     const [previewModal, setPreviewModal] = useState({ isOpen: false, image: null });
     const [textareaHeight, setTextareaHeight] = useState('auto');
+    const [isListening, setIsListening] = useState(false);
+    const [speechRecognition, setSpeechRecognition] = useState(null);
     const streamingRef = useRef(false); // Track streaming status
     const fileInputRef = useRef(null);
     const textareaRef = useRef(null);
@@ -51,11 +53,121 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         }
     };
 
-    // Clean up streaming status
+    // Clean up streaming status and speech recognition
     useEffect(() => {
         return () => {
             streamingRef.current = false;
+            // Clean up speech recognition
+            if (speechRecognition && isListening) {
+                speechRecognition.stop();
+                setIsListening(false);
+            }
         };
+    }, [speechRecognition, isListening]);
+
+    // Initialize speech recognition
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                const recognition = new SpeechRecognition();
+                recognition.continuous = true; // Enable continuous recognition
+                recognition.interimResults = true; // Show interim results
+                recognition.maxAlternatives = 1;
+                recognition.lang = 'zh-yue-HK'; // Default Cantonese
+                
+                recognition.onstart = () => {
+                    setIsListening(true);
+                    console.log('Speech recognition started, current language:', recognition.lang);
+                };
+                
+                recognition.onresult = (event) => {
+                    let finalTranscript = '';
+                    let interimTranscript = '';
+                    
+                    // Process all recognition results
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript;
+                        } else {
+                            interimTranscript += transcript;
+                        }
+                    }
+                    
+                    // Only update input box when there's final result
+                    if (finalTranscript) {
+                        console.log('Final recognition result:', finalTranscript);
+                        setPrompt(prev => prev + finalTranscript + ' ');
+                        setTimeout(adjustTextareaHeight, 0);
+                    }
+                    
+                    // Can display interim results here (optional)
+                    if (interimTranscript) {
+                        console.log('Interim result:', interimTranscript);
+                    }
+                };
+                
+                recognition.onerror = (event) => {
+                    console.error('Speech recognition error:', event.error);
+                    
+                    if (event.error === 'not-allowed') {
+                        setIsListening(false);
+                        toast.error('Please allow microphone access permission');
+                    } else if (event.error === 'network') {
+                        setIsListening(false);
+                        toast.error('Network error, please check network connection');
+                    } else if (event.error === 'language-not-supported') {
+                        // If Cantonese is not supported, automatically switch to English
+                        console.log('Cantonese not supported, switching to English');
+                        recognition.lang = 'en-US';
+                        toast.error('Cantonese recognition not supported, switched to English recognition');
+                    } else if (event.error === 'no-speech') {
+                        // No speech detected, no need to stop in continuous mode
+                        console.log('No speech detected, continue waiting...');
+                    } else if (event.error === 'aborted') {
+                        // User manually stopped, don't show error
+                        console.log('Speech recognition stopped by user');
+                    } else {
+                        // Other errors, try to restart (if still in listening state)
+                        console.log('Speech recognition error, trying to restart:', event.error);
+                        if (isListening) {
+                            setTimeout(() => {
+                                if (isListening) {
+                                    try {
+                                        recognition.start();
+                                    } catch (e) {
+                                        console.log('Failed to restart speech recognition:', e);
+                                    }
+                                }
+                            }, 1000);
+                        }
+                    }
+                };
+                
+                recognition.onend = () => {
+                    console.log('Speech recognition ended');
+                    // In continuous mode, if still in listening state, automatically restart
+                    if (isListening) {
+                        console.log('Auto restarting speech recognition...');
+                        setTimeout(() => {
+                            if (isListening) {
+                                try {
+                                    recognition.start();
+                                } catch (e) {
+                                    console.log('Failed to restart speech recognition:', e);
+                                    setIsListening(false);
+                                }
+                            }
+                        }, 100);
+                    }
+                };
+                
+                setSpeechRecognition(recognition);
+            } else {
+                console.warn('Browser does not support speech recognition feature');
+            }
+        }
     }, []);
 
     // Auto-adjust textarea height
@@ -115,6 +227,34 @@ const PromptBox = ({setIsLoading, isLoading}) => {
             sendPrompt(e);
         }
     }
+
+    // Handle speech recognition
+    const handleSpeechRecognition = () => {
+        if (!speechRecognition) {
+            toast.error('Your browser does not support speech recognition feature');
+            return;
+        }
+        
+        if (isListening) {
+            // Stop speech recognition
+            console.log('User manually stopped speech recognition');
+            setIsListening(false);
+            speechRecognition.stop();
+        } else {
+            // Start speech recognition
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(() => {
+                    console.log('Starting continuous speech recognition');
+                    speechRecognition.lang = 'zh-yue-HK';
+                    setIsListening(true);
+                    speechRecognition.start();
+                })
+                .catch((error) => {
+                    console.error('Microphone permission denied:', error);
+                    toast.error('Please allow microphone access permission');
+                });
+        }
+    };
 
     // Handle image upload
     const handleImageUpload = (files) => {
@@ -320,19 +460,17 @@ const PromptBox = ({setIsLoading, isLoading}) => {
             messages: [...prev.messages, userPrompt]
         }))
 
-        // 准备发送数据，包括图片
+        // Prepare data to send, including images
         const sendData = {
             chatId: currentChat._id,
             prompt: contentToSend,
             images: uploadedImages.length > 0 ? uploadedImages.map(img => img.url) : undefined,
         };
         
-        // 只有在选择了 chatflow 时才添加 chatflowId
+        // Only add chatflowId when a chatflow is selected
         if (selectedChatflow?.id) {
             sendData.chatflowId = selectedChatflow.id;
-        }
-
-        const {data} = await axios.post('/api/chat/ai', sendData)
+        }        const {data} = await axios.post('/api/chat/ai', sendData)
 
         if(data.success){
             const message = data.data.content;
@@ -343,22 +481,22 @@ const PromptBox = ({setIsLoading, isLoading}) => {
                 timestamp: Date.now(),
             }
 
-            // 如果后端返回了更新的聊天名称，更新相关状态
+            // If backend returned updated chat name, update related state
             if(data.chatName && data.chatName !== currentChat.name) {
-                // 更新 chats 数组中的聊天名称
+                // Update chat name in chats array
                 setChats((prevChats)=>prevChats.map((chat)=>
                     chat._id === currentChat._id 
                         ? {...chat, messages: [...chat.messages, data.data], name: data.chatName} 
                         : chat
                 ))
-                // 更新当前选中的聊天名称
+                // Update currently selected chat name
                 setSelectedChat((prev) => ({
                     ...prev,
                     name: data.chatName,
                     messages: [...prev.messages, assistantMessage],
                 }))
             } else {
-                // 只更新消息，不更新名称
+                // Only update messages, not name
                 setChats((prevChats)=>prevChats.map((chat)=>chat._id === currentChat._id ? {...chat, messages: [...chat.messages, data.data]} : chat))
                 setSelectedChat((prev) => ({
                     ...prev,
@@ -366,12 +504,12 @@ const PromptBox = ({setIsLoading, isLoading}) => {
                 }))
             }
 
-            // 优化的streaming效果 - 修复state更新问题和添加清理机制
+            // Optimized streaming effect - fix state update issues and add cleanup mechanism
             const streamMessage = (fullContent) => {
-                streamingRef.current = true; // 开始streaming
+                streamingRef.current = true; // Start streaming
                 const chars = fullContent.split('');
                 let currentIndex = 0;
-                const baseSpeed = 20; // 稍微慢一点，减少频繁更新
+                const baseSpeed = 20; // Slightly slower to reduce frequent updates
                 
                 const typeNextChunk = () => {
                     if (!streamingRef.current || currentIndex >= chars.length) {
@@ -379,22 +517,22 @@ const PromptBox = ({setIsLoading, isLoading}) => {
                         return;
                     }
                     
-                    // 每次显示2-5个字符，减少更新频率
+                    // Display 2-5 characters at a time to reduce update frequency
                     let chunkSize = 2;
                     const remainingChars = chars.length - currentIndex;
                     
                     if (remainingChars > 200) {
-                        chunkSize = Math.min(5, remainingChars); // 长内容快速显示
+                        chunkSize = Math.min(5, remainingChars); // Fast display for long content
                     } else if (remainingChars > 50) {
-                        chunkSize = Math.min(3, remainingChars); // 中等内容适中显示
+                        chunkSize = Math.min(3, remainingChars); // Medium display for medium content
                     } else {
-                        chunkSize = Math.min(2, remainingChars); // 短内容稍慢显示
+                        chunkSize = Math.min(2, remainingChars); // Slower display for short content
                     }
                     
                     currentIndex += chunkSize;
                     const currentContent = chars.slice(0, currentIndex).join('');
                     
-                    // 使用requestAnimationFrame来避免频繁的state更新
+                    // Use requestAnimationFrame to avoid frequent state updates
                     requestAnimationFrame(() => {
                         if (!streamingRef.current) return;
                         
@@ -410,19 +548,19 @@ const PromptBox = ({setIsLoading, isLoading}) => {
                     });
                     
                     if (currentIndex < chars.length && streamingRef.current) {
-                        // 动态速度调整
+                        // Dynamic speed adjustment
                         let delay = baseSpeed;
                         const currentChar = chars[currentIndex - 1];
                         
                         if (currentChar === '.' || currentChar === '!' || currentChar === '?') {
-                            delay = baseSpeed * 2; // 句号后短暂停顿
+                            delay = baseSpeed * 2; // Brief pause after period
                         } else if (currentChar === ',' || currentChar === ';') {
-                            delay = baseSpeed * 1.5; // 逗号后轻微停顿
+                            delay = baseSpeed * 1.5; // Light pause after comma
                         } else if (currentChar === ' ') {
-                            delay = baseSpeed * 0.8; // 空格稍快
+                            delay = baseSpeed * 0.8; // Slightly faster for spaces
                         }
                         
-                        // 代码块快速显示
+                        // Fast display for code blocks
                         if (currentContent.includes('```') && !currentContent.trim().endsWith('```')) {
                             delay = baseSpeed * 0.5;
                         }
@@ -433,14 +571,14 @@ const PromptBox = ({setIsLoading, isLoading}) => {
                     }
                 };
                 
-                // 开始显示
-                setTimeout(typeNextChunk, 100); // 初始延迟
+                // Start displaying
+                setTimeout(typeNextChunk, 100); // Initial delay
             };
             
-            // 开始streaming
+            // Start streaming
             streamMessage(message);
 
-            // 清空上传的图片
+            // Clear uploaded images
             setUploadedImages([]);
         }else{
             toast.error(data.message);
@@ -457,7 +595,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
 
   return (
     <div className={`w-full ${selectedChat?.messages.length > 0 ? "max-w-3xl" : "max-w-2xl"} transition-all`}>
-      {/* 图片预览区域 */}
+      {/* Image preview area */}
       {uploadedImages.length > 0 && (
         <div className="mb-3 p-3 bg-[#404045] rounded-2xl">
           <div className="flex flex-wrap gap-2">
@@ -481,7 +619,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         </div>
       )}
 
-      {/* 图片预览模态框 */}
+      {/* Image preview modal */}
       {previewModal.isOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
@@ -509,16 +647,16 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         </div>
       )}
 
-      {/* 快捷短语按钮 */}
+      {/* Quick phrase buttons */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         {quickPrompts
           .filter((item) => {
-            // 如果是新聊天状态（没有选中聊天或消息为空），只显示"Let's learn"按钮
+            // For new chat state (no selected chat or empty messages), only show "Let's learn" button
             const isNewChat = !selectedChat || !selectedChat.messages || selectedChat.messages.length === 0;
             if (isNewChat) {
               return item.text === "Let's learn";
             }
-            // 如果不是新聊天状态，显示所有按钮
+            // For non-new chat state, show all buttons
             return true;
           })
           .map((item, index) => (
@@ -554,7 +692,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
        onDragLeave={handleDragLeave}
        onDrop={handleDrop}>
         
-        {/* 隐藏的文件输入 */}
+        {/* Hidden file input */}
         <input
           ref={fileInputRef}
           type="file"
@@ -570,14 +708,14 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         onPaste={handlePaste}
         className='outline-none w-full resize-none bg-transparent leading-6 text-sm placeholder:text-gray-400 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent textarea-smooth'
         style={{ 
-            minHeight: '48px', // 2行的最小高度
-            maxHeight: '192px', // 8行的最大高度
+            minHeight: '48px', // Minimum height for 2 lines
+            maxHeight: '192px', // Maximum height for 8 lines
             overflowY: 'hidden',
             lineHeight: '24px',
             wordWrap: 'break-word',
-            paddingRight: '8px' // 为滚动条留出空间
+            paddingRight: '8px' // Leave space for scrollbar
         }}
-        placeholder={isDragging ? 'Drag images here to upload...' : 'Type a message or drag images here...'} 
+        placeholder={isDragging ? 'Drag images here to upload...' : isListening ? 'Continuous listening...' : 'Type a message, drag images, or use voice input...'} 
         required 
         onChange={handleInputChange} 
         value={prompt}
@@ -600,6 +738,24 @@ const PromptBox = ({setIsLoading, isLoading}) => {
               title="Upload Image"
             >
               <Image className='w-4' src={assets.pin_icon} alt='Upload Image'/>
+            </button>
+            
+            {/* Voice recognition button */}
+            <button
+              type="button"
+              onClick={handleSpeechRecognition}
+              className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 ${
+                isListening 
+                  ? 'bg-red-500 animate-pulse shadow-lg shadow-red-500/50' 
+                  : 'hover:bg-gray-600/30'
+              }`}
+              title={isListening ? "Click to stop continuous recording" : "Click to start continuous voice input (supports Cantonese and English)"}
+            >
+              <Image 
+                className={`w-4 transition-all ${isListening ? 'brightness-0 invert' : ''}`}
+                src={assets.phone_icon} 
+                alt='Voice Input'
+              />
             </button>
             
             <button 
