@@ -17,7 +17,7 @@ const ChatSchema = new mongoose.Schema(
             },
         ],
         userId: {type: String, required: true},
-        chatflowId: {type: String, default: null}, // 关联到特定的 chatflow
+        chatflowId: {type: String, default: null}, // Associate with specific chatflow
     },
     {timestamps: true}
 );

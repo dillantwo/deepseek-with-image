@@ -9,14 +9,14 @@ const ChatflowSelector = ({ selectedChatflow, onChatflowChange }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
-    // 允许的chatflow ID列表
+    // List of allowed chatflow IDs
     const allowedChatflowIds = [
-        '4246f046-843f-473a-83bc-e196b73214cd', // 中文
+        '4246f046-843f-473a-83bc-e196b73214cd', // Chinese
         '41028bde-ac4a-4163-a1a2-a305b00d3879', // English
         'bed35024-cc23-4d4e-b0c5-800cf4eab1e9'  // Water
     ];
 
-    // 获取chatflows列表
+    // Get chatflows list
     useEffect(() => {
         fetchChatflows();
     }, []);
@@ -26,12 +26,12 @@ const ChatflowSelector = ({ selectedChatflow, onChatflowChange }) => {
         try {
             const response = await axios.get('/api/chatflows');
             if (response.data.success) {
-                // 过滤只显示允许的chatflow ID
+                // Filter to show only allowed chatflow IDs
                 const filteredChatflows = response.data.data.filter(chatflow => 
                     allowedChatflowIds.includes(chatflow.id)
                 );
                 setChatflows(filteredChatflows);
-                // 如果没有选中的chatflow，默认选择第一个允许的chatflow
+                // If no chatflow is selected, default to the first allowed chatflow
                 if (!selectedChatflow && filteredChatflows.length > 0) {
                     onChatflowChange(filteredChatflows[0]);
                 }
@@ -53,7 +53,7 @@ const ChatflowSelector = ({ selectedChatflow, onChatflowChange }) => {
 
     return (
         <div className="relative">
-            {/* 选择按钮 */}
+            {/* Selection button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="flex items-center gap-2 px-3 py-2 bg-[#404045] border border-gray-300/40 rounded-lg hover:bg-gray-500/20 transition-colors w-full max-w-56 justify-between"
@@ -79,7 +79,7 @@ const ChatflowSelector = ({ selectedChatflow, onChatflowChange }) => {
                 />
             </button>
 
-            {/* 下拉菜单 */}
+            {/* Dropdown menu */}
             {isOpen && !isLoading && (
                 <div className="absolute top-full left-0 mt-1 w-full min-w-64 bg-[#2f2f35] border border-gray-600 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
                     {chatflows.length === 0 ? (
@@ -115,7 +115,7 @@ const ChatflowSelector = ({ selectedChatflow, onChatflowChange }) => {
                         ))
                     )}
                     
-                    {/* 刷新按钮 */}
+                    {/* Refresh button */}
                     <div className="px-3 py-2 border-t border-gray-600/30">
                         <button
                             onClick={() => {

@@ -18,10 +18,10 @@ module.exports = {
     watch: false,
     ignore_watch: ['node_modules', '.next', 'logs'],
     restart_delay: 4000,
-    // 健康检查
+    // Health check
     health_check_grace_period: 3000,
     health_check_interval: 30000,
-    // 自动重启配置
+    // Auto restart configuration
     max_restarts: 10,
     min_uptime: '10s'
   }]

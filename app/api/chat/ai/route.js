@@ -49,7 +49,7 @@ async function queryFlowise(data, chatflowId) {
     });
     
     if (!response.ok) {
-        // 获取详细的错误信息
+        // Get detailed error information
         let errorMessage = `Flowise API error: ${response.status} ${response.statusText}`;
         try {
             const errorBody = await response.text();
@@ -57,7 +57,7 @@ async function queryFlowise(data, chatflowId) {
                 errorMessage += ` - ${errorBody}`;
             }
         } catch (e) {
-            // 忽略解析错误响应体的错误
+            // Ignore errors when parsing error response body
         }
         throw new Error(errorMessage);
     }
@@ -86,7 +86,7 @@ export async function POST(req){
 
         console.log('Received request:', { userId, chatId, prompt, imagesCount: images?.length, chatflowId });
         
-        // 如果有图片，打印图片信息用于调试
+        // If there are images, print image information for debugging
         if (images && images.length > 0) {
             console.log('Received images:', images.map((img, index) => ({
                 index,
@@ -139,20 +139,20 @@ export async function POST(req){
             role: "user",
             content: prompt,
             timestamp: Date.now(),
-            // 处理图片信息：如果images是字符串数组（URL），转换为对象格式
+            // Handle image information: if images is a string array (URLs), convert to object format
             ...(images && images.length > 0 && { 
                 images: images.map((img, index) => {
                     if (typeof img === 'string') {
-                        // 如果是字符串（URL），转换为对象格式
+                        // If it's a string (URL), convert to object format
                         return {
                             name: `Image ${index + 1}`,
                             url: img
                         };
                     } else if (typeof img === 'object' && img.url) {
-                        // 如果已经是对象格式，直接使用
+                        // If it's already in object format, use it directly
                         return img;
                     } else {
-                        // 备用处理
+                        // Fallback handling
                         return {
                             name: `Image ${index + 1}`,
                             url: img
@@ -164,16 +164,16 @@ export async function POST(req){
 
         data.messages.push(userPrompt);
 
-        // 如果这是第一条用户消息（聊天刚创建），则将提问设为聊天名称
+        // If this is the first user message (chat just created), set the question as chat name
         const isFirstMessage = data.messages.filter(msg => msg.role === 'user').length === 1;
         if (isFirstMessage && data.name === "New Chat") {
-            // 截取前50个字符作为聊天名称，避免名称过长
+            // Truncate to first 50 characters as chat name to avoid overly long names
             const chatName = prompt.length > 50 ? prompt.substring(0, 50) + "..." : prompt;
             data.name = chatName;
         }
 
         // Prepare chat history for Flowise API
-        // Flowise 可能需要历史消息来保持对话上下文
+        // Flowise may need historical messages to maintain conversation context
         const chatHistory = data.messages.map(msg => ({
             role: msg.role,
             content: msg.content,
@@ -183,7 +183,7 @@ export async function POST(req){
         // Call the Flowise API to get a chat completion
         // Use the session ID generated earlier
         
-        // 先测试最简单的请求格式
+        // First test the simplest request format
         const requestData = {
             question: prompt,
             overrideConfig: {
@@ -191,14 +191,14 @@ export async function POST(req){
             }
         };
         
-        // 只有在有图片时才添加uploads字段
+        // Only add uploads field when there are images
         if (images && images.length > 0) {
             requestData.uploads = images.map((img, index) => {
                 const upload = {
-                    data: img, // 应该是 base64 字符串或 URL
-                    type: img.startsWith('data:') ? 'file' : 'url', // 根据数据格式判断类型
-                    name: `image_${index + 1}.png`, // 给图片一个名称
-                    mime: img.startsWith('data:image/') ? img.split(';')[0].split(':')[1] : 'image/png' // 从 data URL 中提取 MIME 类型
+                    data: img, // Should be base64 string or URL
+                    type: img.startsWith('data:') ? 'file' : 'url', // Determine type based on data format
+                    name: `image_${index + 1}.png`, // Give the image a name
+                    mime: img.startsWith('data:image/') ? img.split(';')[0].split(':')[1] : 'image/png' // Extract MIME type from data URL
                 };
                 console.log(`Upload ${index + 1}:`, {
                     type: upload.type,
@@ -225,14 +225,14 @@ export async function POST(req){
         console.log('Flowise response keys:', completion ? Object.keys(completion) : 'null');
         console.log('Flowise full response:', JSON.stringify(completion, null, 2));
         
-        // Flowise 响应格式适配为标准的聊天消息格式
-        // Flowise API 通常返回包含响应的对象
+        // Adapt Flowise response format to standard chat message format
+        // Flowise API usually returns an object containing the response
         let responseContent = '';
         
         if (typeof completion === 'string') {
             responseContent = completion;
         } else if (completion && typeof completion === 'object') {
-            // 尝试常见的响应字段
+            // Try common response fields
             responseContent = completion.text || 
                              completion.response || 
                              completion.answer || 
@@ -254,11 +254,11 @@ export async function POST(req){
         data.messages.push(message);
         await data.save();
 
-        // 返回助手消息和更新的聊天信息（包括可能更新的名称）
+        // Return assistant message and updated chat information (including possibly updated name)
         return NextResponse.json({
             success: true, 
             data: message,
-            chatName: data.name // 返回更新后的聊天名称
+            chatName: data.name // Return updated chat name
         })
     } catch (error) {
         console.error('Error in AI chat API:', error);

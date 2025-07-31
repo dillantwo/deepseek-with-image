@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 
-// Flowise API配置
+// Flowise API configuration
 const FLOWISE_BASE_URL = process.env.FLOWISE_BASE_URL;
 const FLOWISE_API_KEY = process.env.FLOWISE_API_KEY;
 
 export async function GET() {
     try {
-        // 获取所有chatflows
+        // Get all chatflows
         const response = await fetch(`${FLOWISE_BASE_URL}/api/v1/chatflows`, {
             method: "GET",
             headers: {
@@ -21,13 +21,13 @@ export async function GET() {
 
         const chatflows = await response.json();
         
-        // 格式化chatflows数据，只返回需要的字段
-        // 获取到的chatflow都是可用的，所以deployed设为true
+        // Format chatflows data, return only needed fields
+        // All fetched chatflows are available, so set deployed to true
         const formattedChatflows = chatflows.map(flow => ({
             id: flow.id,
             name: flow.name,
             description: flow.description || '',
-            deployed: true, // 获取到的都是可用的
+            deployed: true, // All fetched ones are available
             category: flow.category || 'General'
         }));
 

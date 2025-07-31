@@ -20,7 +20,7 @@ export default function Home() {
     if(selectedChat){
       setMessages(selectedChat.messages)
     } else {
-      setMessages([]) // 当没有选中聊天时，清空消息
+      setMessages([]) // Clear messages when no chat is selected
     }
   },[selectedChat])
 
@@ -40,14 +40,14 @@ export default function Home() {
       <div className="flex h-screen">
         <Sidebar expand={expand} setExpand={setExpand}/>
         <div className="flex-1 flex flex-col items-center justify-center px-4 pb-8 bg-[#292a2d] text-white relative">
-          {/* 移动端顶部导航 */}
+          {/* Mobile top navigation */}
           <div className="md:hidden absolute px-4 top-6 flex items-center justify-between w-full">
             <Image onClick={()=> (expand ? setExpand(false) : setExpand(true))}
              className="rotate-180" src={assets.menu_icon} alt=""/>
             <Image className="opacity-70" src={assets.chat_icon} alt=""/>
           </div>
 
-          {/* 桌面端 ChatflowSelector */}
+          {/* Desktop ChatflowSelector */}
           <div className="hidden md:block absolute top-6 left-6 z-10">
             <ChatflowSelector 
               selectedChatflow={selectedChatflow} 
@@ -55,7 +55,7 @@ export default function Home() {
             />
           </div>
 
-          {/* 移动端 ChatflowSelector */}
+          {/* Mobile ChatflowSelector */}
           <div className="md:hidden absolute top-16 left-4 right-4 z-10">
             <ChatflowSelector 
               selectedChatflow={selectedChatflow} 
