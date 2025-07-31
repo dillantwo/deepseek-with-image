@@ -13,67 +13,67 @@ const PromptBox = ({setIsLoading, isLoading}) => {
     const [isDragging, setIsDragging] = useState(false);
     const [previewModal, setPreviewModal] = useState({ isOpen: false, image: null });
     const [textareaHeight, setTextareaHeight] = useState('auto');
-    const streamingRef = useRef(false); // 跟踪streaming状态
+    const streamingRef = useRef(false); // Track streaming status
     const fileInputRef = useRef(null);
     const textareaRef = useRef(null);
     const {user, chats, setChats, selectedChat, setSelectedChat, selectedChatflow, setSelectedChatflow, createNewChat} = useAppContext();
     const {getToken} = useAuth();
 
-    // 预设的快捷短语
+    // Preset quick phrases
     const quickPrompts = [
         { text: 'Good', content: 'Good! ' },
         { text: "Let's learn", content: "Let's learn！" },
         { text: 'Please recommend', content: 'Please recommend！' }
     ];
 
-    // 处理快捷短语点击 - 直接发送消息
+    // Handle quick phrase click - send message directly
     const handleQuickPrompt = async (content) => {
-        // 创建一个模拟的事件对象用于sendPrompt函数
+        // Create a mock event object for sendPrompt function
         const mockEvent = {
             preventDefault: () => {}
         };
         
-        // 临时设置prompt为快捷短语内容
+        // Temporarily set prompt to quick phrase content
         const originalPrompt = prompt;
         setPrompt(content);
         
-        // 等待一个微任务，确保状态更新
+        // Wait for a microtask to ensure state update
         await new Promise(resolve => setTimeout(resolve, 0));
         
-        // 直接调用sendPrompt发送消息
+        // Directly call sendPrompt to send message
         try {
             await sendPromptWithContent(mockEvent, content);
         } catch (error) {
-            // 如果发送失败，恢复原始prompt
+            // If sending fails, restore original prompt
             setPrompt(originalPrompt);
         }
     };
 
-    // 清理streaming状态
+    // Clean up streaming status
     useEffect(() => {
         return () => {
             streamingRef.current = false;
         };
     }, []);
 
-    // 自动调整textarea高度
+    // Auto-adjust textarea height
     const adjustTextareaHeight = () => {
         const textarea = textareaRef.current;
         if (textarea) {
-            // 重置高度以获得正确的scrollHeight
+            // Reset height to get correct scrollHeight
             textarea.style.height = 'auto';
             
-            // 计算内容高度
+            // Calculate content height
             const scrollHeight = textarea.scrollHeight;
-            const lineHeight = 24; // 每行的高度
-            const minHeight = lineHeight * 2; // 最小2行
-            const maxHeight = lineHeight * 8; // 最大8行
+            const lineHeight = 24; // Height per line
+            const minHeight = lineHeight * 2; // Minimum 2 lines
+            const maxHeight = lineHeight * 8; // Maximum 8 lines
             
-            // 设置高度，但不超过最大值
+            // Set height but don't exceed maximum
             const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
             textarea.style.height = `${newHeight}px`;
             
-            // 如果内容超过最大高度，启用滚动
+            // Enable scrolling if content exceeds maximum height
             if (scrollHeight > maxHeight) {
                 textarea.style.overflowY = 'auto';
             } else {
@@ -82,23 +82,23 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         }
     };
 
-    // 重置textarea高度到初始状态
+    // Reset textarea height to initial state
     const resetTextareaHeight = () => {
         const textarea = textareaRef.current;
         if (textarea) {
-            textarea.style.height = '48px'; // 重置为最小高度
+            textarea.style.height = '48px'; // Reset to minimum height
             textarea.style.overflowY = 'hidden';
         }
     };
 
-    // 处理输入变化
+    // Handle input changes
     const handleInputChange = (e) => {
         setPrompt(e.target.value);
-        // 延迟调整高度，确保内容已更新
+        // Delay height adjustment to ensure content is updated
         setTimeout(adjustTextareaHeight, 0);
     };
 
-    // 在组件挂载后调整初始高度
+    // Adjust initial height after component mount
     useEffect(() => {
         if (prompt === '') {
             resetTextareaHeight();
@@ -114,7 +114,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         }
     }
 
-    // 处理图片上传
+    // Handle image upload
     const handleImageUpload = (files) => {
         const validFiles = Array.from(files).filter(file => {
             if (!file.type.startsWith('image/')) {
@@ -143,7 +143,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         });
     };
 
-    // 处理文件选择
+    // Handle file selection
     const handleFileSelect = (e) => {
         const files = e.target.files;
         if (files && files.length > 0) {
@@ -151,7 +151,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         }
     };
 
-    // 处理拖拽
+    // Handle drag and drop
     const handleDragOver = (e) => {
         e.preventDefault();
         setIsDragging(true);
@@ -171,7 +171,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         }
     };
 
-    // 处理粘贴
+    // Handle paste
     const handlePaste = (e) => {
         const items = e.clipboardData.items;
         let hasImage = false;
@@ -187,7 +187,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
             }
         }
         
-        // 如果没有图片，说明是文本粘贴，需要调整高度
+        // If no image, it's text paste, need to adjust height
         if (!hasImage) {
             setTimeout(() => {
                 adjustTextareaHeight();
@@ -195,22 +195,22 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         }
     };
 
-    // 移除图片
+    // Remove image
     const removeImage = (imageId) => {
         setUploadedImages(prev => prev.filter(img => img.id !== imageId));
     };
 
-    // 打开文件选择器
+    // Open file selector
     const openFileSelector = () => {
         fileInputRef.current?.click();
     };
 
-    // 打开图片预览模态框
+    // Open image preview modal
     const openPreviewModal = (image) => {
         setPreviewModal({ isOpen: true, image });
     };
 
-    // 关闭图片预览模态框
+    // Close image preview modal
     const closePreviewModal = () => {
         setPreviewModal({ isOpen: false, image: null });
     };
@@ -228,16 +228,16 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         try {
             if(!user) return toast.error('Login to send message');
             if(isLoading) return toast.error('Wait for the previous prompt response');
-            if(!contentToSend.trim()) return; // 如果没有输入内容，不执行任何操作
+            if(!contentToSend.trim()) return; // If no input content, do nothing
             
-            // 如果没有选中聊天，自动创建一个新聊天
+            // If no chat is selected, automatically create a new chat
             let currentChat = selectedChat;
             if(!currentChat) {
                 setIsLoading(true);
-                setPrompt(""); // 清空输入框，防止重复提交
+                setPrompt(""); // Clear input to prevent duplicate submission
                 
                 try {
-                    // 创建新聊天
+                    // Create new chat
                     const token = await getToken();
                     const chatData = selectedChatflow ? { chatflowId: selectedChatflow.id } : {};
                     
@@ -247,31 +247,31 @@ const PromptBox = ({setIsLoading, isLoading}) => {
                     
                     if (!createResponse.data.success) {
                         setIsLoading(false);
-                        setPrompt(contentToSend); // 恢复输入内容
+                        setPrompt(contentToSend); // Restore input content
                         return toast.error('Failed to create new chat. Please try again.');
                     }
                     
-                    // 获取新创建的聊天
+                    // Get newly created chat
                     const chatsResponse = await axios.get('/api/chat/get', {
                         headers: { Authorization: `Bearer ${token}` }
                     });
                     
                     if (chatsResponse.data.success && chatsResponse.data.data.length > 0) {
-                        // 找到刚创建的聊天（最新的）
+                        // Find the newly created chat (latest one)
                         const sortedChats = chatsResponse.data.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
                         let newChat;
                         
                         if (selectedChatflow) {
-                            // 如果有选中的 chatflow，找到属于该 chatflow 的最新聊天
+                            // If chatflow is selected, find the latest chat belonging to that chatflow
                             newChat = sortedChats.find(chat => chat.chatflowId === selectedChatflow.id);
                         } else {
-                            // 如果没有选中 chatflow，取最新的聊天
+                            // If no chatflow is selected, take the latest chat
                             newChat = sortedChats[0];
                         }
                         
                         if (newChat) {
                             currentChat = newChat;
-                            // 更新状态但不等待，继续发送消息
+                            // Update state but don't wait, continue sending message
                             setChats(chatsResponse.data.data);
                             setSelectedChat(newChat);
                         } else {
@@ -294,7 +294,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
                 setPrompt("");
             }
 
-            // 现在发送消息
+            // Now send message
             const userPrompt = {
                 role: "user",
                 content: contentToSend,
@@ -559,7 +559,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
             wordWrap: 'break-word',
             paddingRight: '8px' // 为滚动条留出空间
         }}
-        placeholder={isDragging ? '拖拽图片到这里上传...' : '输入消息或拖拽图片到这里...'} 
+        placeholder={isDragging ? 'Drag images here to upload...' : 'Type a message or drag images here...'} 
         required 
         onChange={handleInputChange} 
         value={prompt}
