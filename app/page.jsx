@@ -82,7 +82,9 @@ export default function Home() {
           className="relative flex flex-col items-center justify-start w-full mt-32 md:mt-20 max-h-screen overflow-y-auto"
           > 
           <p className="fixed top-20 md:top-8 border border-transparent hover:border-gray-500/50 py-1 px-2 rounded-lg font-semibold mb-6">
-            {selectedChat?.name || 'No Chat Selected'}
+            {(selectedChat?.name || 'No Chat Selected').length > 8 
+              ? (selectedChat?.name || 'No Chat Selected').substring(0, 8) + '...' 
+              : (selectedChat?.name || 'No Chat Selected')}
             {selectedChatflow && (
               <span className="text-xs text-gray-400 ml-2">• {selectedChatflow.name}</span>
             )}
