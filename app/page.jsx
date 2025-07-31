@@ -66,10 +66,10 @@ export default function Home() {
           {messages.length === 0 || !selectedChat ? (
             <div className="mt-16 md:mt-0">
             <div className="flex items-center gap-3">
-              <Image src={assets.logo_icon} alt="" className="h-16"/>
+              <Image src={assets.reshot_icon} alt="" className="h-10"/>
               <p className="text-2xl font-medium">Hi, I'm FirstChat.</p>
             </div>
-            <p className="text-sm mt-2">
+            <p className="text-sm mt-2 ml-13">
               {selectedChatflow 
                 ? `How can I help you with ${selectedChatflow.name}?` 
                 : 'How can I help you today?'
@@ -94,7 +94,7 @@ export default function Home() {
             isLoading && (
               <div className="flex gap-4 max-w-3xl w-full py-3">
                 <Image className="h-9 w-9 p-1 border border-white/15 rounded-full"
-                 src={assets.logo_icon} alt="Logo"/>
+                 src={assets.reshot_icon} alt="Logo"/>
                  <div className="loader flex justify-center items-center gap-1">
                   <div className="w-1 h-1 rounded-full bg-white animate-bounce"></div>
                   <div className="w-1 h-1 rounded-full bg-white animate-bounce"></div>
