@@ -511,7 +511,17 @@ const PromptBox = ({setIsLoading, isLoading}) => {
 
       {/* 快捷短语按钮 */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
-        {quickPrompts.map((item, index) => (
+        {quickPrompts
+          .filter((item) => {
+            // 如果是新聊天状态（没有选中聊天或消息为空），只显示"Let's learn"按钮
+            const isNewChat = !selectedChat || !selectedChat.messages || selectedChat.messages.length === 0;
+            if (isNewChat) {
+              return item.text === "Let's learn";
+            }
+            // 如果不是新聊天状态，显示所有按钮
+            return true;
+          })
+          .map((item, index) => (
           <button
             key={index}
             type="button"
