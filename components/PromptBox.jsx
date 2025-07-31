@@ -23,7 +23,9 @@ const PromptBox = ({setIsLoading, isLoading}) => {
     const quickPrompts = [
         { text: 'Good', content: 'Good! ' },
         { text: "Let's learn", content: "Let's learn！" },
-        { text: 'Please recommend', content: 'Please recommend！' }
+        { text: 'Please recommend', content: 'Please recommend！' },
+        { text: 'Please continue', content: 'Please continue ' },
+        { text: 'Free to chat', content: 'Free to chat ' }
     ];
 
     // Handle quick phrase click - send message directly
@@ -524,6 +526,12 @@ const PromptBox = ({setIsLoading, isLoading}) => {
             )}
             {item.text === 'Please recommend' && (
               <span className="text-sm opacity-70 group-hover:opacity-100 transition-opacity">😊</span>
+            )}
+            {item.text === 'Please continue' && (
+              <Image src={assets.regenerate_icon} alt="" className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
+            )}
+            {item.text === 'Free to chat' && (
+              <Image src={assets.chat_icon} alt="" className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
             )}
             <span className="whitespace-nowrap font-medium">{item.text}</span>
           </button>
