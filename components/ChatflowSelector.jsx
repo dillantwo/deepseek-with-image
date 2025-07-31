@@ -13,7 +13,9 @@ const ChatflowSelector = ({ selectedChatflow, onChatflowChange }) => {
     const allowedChatflowIds = [
         '4246f046-843f-473a-83bc-e196b73214cd', // Chinese
         'b1ce49fc-53bb-49b1-aec4-4fa5d788d750', // English
-        'bed35024-cc23-4d4e-b0c5-800cf4eab1e9'  // Water
+        'bed35024-cc23-4d4e-b0c5-800cf4eab1e9',  // Water
+        '768fcedf-5976-4953-b9bf-09b907364236', // Math
+        '57f929ff-c54b-4542-9dd0-a6eb45811ab0', // Science
     ];
 
     // Get chatflows list
