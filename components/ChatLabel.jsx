@@ -7,7 +7,7 @@ import toast from 'react-hot-toast'
 
 const ChatLabel = ({openMenu, setOpenMenu, id, name}) => {
 
-  const {fetchUsersChats, chats, setSelectedChat} = useAppContext()
+  const {fetchUsersChats, chats, setSelectedChat, selectedChat} = useAppContext()
 
   const selectChat = ()=>{
     const chatData = chats.find(chat => chat._id === id)
@@ -50,7 +50,7 @@ const ChatLabel = ({openMenu, setOpenMenu, id, name}) => {
   }
 
   return (
-    <div onClick={selectChat} className='flex items-center justify-between p-2 text-white/80 hover:bg-white/10 rounded-lg text-sm group cursor-pointer'>
+    <div onClick={selectChat} className={`flex items-center justify-between p-2 text-white/80 hover:bg-white/10 rounded-lg text-sm group cursor-pointer ${selectedChat?._id === id ? 'bg-white/10' : ''}`}>
       <p className='group-hover:max-w-4/6 truncate flex-1 min-w-0'>{name}</p>
       <div onClick={e=>{e.stopPropagation();setOpenMenu({id: id, open: !openMenu.open})}}
        className='group relative flex items-center justify-center h-6 w-6 aspect-square hover:bg-black/80 rounded-lg flex-shrink-0'>
