@@ -58,12 +58,12 @@ const ChatflowSelector = ({ selectedChatflow, onChatflowChange }) => {
             {/* Selection button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-3 py-2 bg-[#404045] border border-gray-300/40 rounded-lg hover:bg-gray-500/20 transition-colors w-full max-w-56 justify-between"
+                className="flex items-center gap-2 px-3 py-2 bg-[#404045] border border-gray-300/40 rounded-lg hover:bg-gray-500/20 transition-colors w-full max-w-56 justify-between overflow-hidden"
                 disabled={isLoading}
             >
-                <div className="flex items-center gap-2">
-                    <Image src={assets.chat_icon} alt="" className="w-4 h-4" />
-                    <div className="text-left flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+                    <Image src={assets.chat_icon} alt="" className="w-4 h-4 flex-shrink-0" />
+                    <div className="text-left flex-1 min-w-0 overflow-hidden">
                         <div className="text-sm font-medium text-white truncate">
                             {isLoading ? 'Loading...' : (selectedChatflow?.name || 'Select Chatflow')}
                         </div>
@@ -93,13 +93,13 @@ const ChatflowSelector = ({ selectedChatflow, onChatflowChange }) => {
                             <button
                                 key={chatflow.id}
                                 onClick={() => handleSelect(chatflow)}
-                                className={`w-full text-left px-3 py-2 hover:bg-gray-600/50 transition-colors border-b border-gray-600/30 last:border-b-0 ${
+                                className={`w-full text-left px-3 py-2 hover:bg-gray-600/50 transition-colors border-b border-gray-600/30 last:border-b-0 overflow-hidden ${
                                     selectedChatflow?.id === chatflow.id ? 'bg-gray-600/30' : ''
                                 }`}
                             >
-                                <div className="flex items-center gap-2">
-                                    <div className={`w-2 h-2 rounded-full ${chatflow.deployed ? 'bg-green-500' : 'bg-gray-500'}`} />
-                                    <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 overflow-hidden">
+                                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${chatflow.deployed ? 'bg-green-500' : 'bg-gray-500'}`} />
+                                    <div className="flex-1 min-w-0 overflow-hidden">
                                         <div className="text-sm font-medium text-white truncate">
                                             {chatflow.name}
                                         </div>
@@ -108,7 +108,7 @@ const ChatflowSelector = ({ selectedChatflow, onChatflowChange }) => {
                                                 {chatflow.description}
                                             </div>
                                         )}
-                                        <div className="text-xs text-gray-500">
+                                        <div className="text-xs text-gray-500 truncate">
                                             {chatflow.category} • {chatflow.deployed ? 'Active' : 'Inactive'}
                                         </div>
                                     </div>

@@ -27,6 +27,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         { text: "Let's learn", content: "Let's learn！" },
         { text: 'Please recommend', content: 'Please recommend！' },
         { text: 'Please continue', content: 'Please continue ' },
+        { text: 'Show answer', content: 'Show answer ' },
         { text: 'Free to chat', content: 'Free to chat ' }
     ];
 
@@ -677,6 +678,9 @@ const PromptBox = ({setIsLoading, isLoading}) => {
             )}
             {item.text === 'Please continue' && (
               <Image src={assets.regenerate_icon} alt="" className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
+            )}
+            {item.text === 'Show answer' && (
+              <span className="text-sm opacity-70 group-hover:opacity-100 transition-opacity">💡</span>
             )}
             {item.text === 'Free to chat' && (
               <Image src={assets.chat_icon} alt="" className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
