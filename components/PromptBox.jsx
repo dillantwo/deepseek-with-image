@@ -265,8 +265,8 @@ const PromptBox = ({setIsLoading, isLoading}) => {
                 toast.error('Only image files are allowed');
                 return false;
             }
-            if (file.size > 10 * 1024 * 1024) { // 10MB limit
-                toast.error('Image file cannot exceed 10MB');
+            if (file.size > 50 * 1024 * 1024) { // 50MB limit
+                toast.error('Image file cannot exceed 50MB');
                 return false;
             }
             return true;
