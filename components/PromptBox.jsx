@@ -723,10 +723,6 @@ const PromptBox = ({setIsLoading, isLoading}) => {
 
         <div className='flex items-center justify-between text-sm'>
             <div className='flex items-center gap-2'>
-                <p className='flex items-center gap-2 text-xs border border-gray-300/40 px-2 py-1 rounded-full cursor-pointer hover:bg-gray-500/20 transition'>
-                    <Image className='h-5' src={assets.search_icon} alt=''/>
-                    Search
-                </p>
             </div>
 
             <div className='flex items-center gap-2'>
