@@ -692,7 +692,6 @@ const PromptBox = ({setIsLoading, isLoading}) => {
        onDragLeave={handleDragLeave}
        onDrop={handleDrop}>
         
-        {/* Hidden file input */}
         <input
           ref={fileInputRef}
           type="file"
