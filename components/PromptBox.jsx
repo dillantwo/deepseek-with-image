@@ -1,6 +1,7 @@
 import { assets } from '@/assets/assets'
 import { useAppContext } from '@/context/AppContext';
 import { useAuth } from '@clerk/nextjs';
+import { useClerk } from '@clerk/nextjs';
 import axios from 'axios';
 import Image from 'next/image'
 import React, { useState, useRef, useEffect } from 'react'
@@ -20,6 +21,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
     const textareaRef = useRef(null);
     const {user, chats, setChats, selectedChat, setSelectedChat, selectedChatflow, setSelectedChatflow, createNewChat} = useAppContext();
     const {getToken} = useAuth();
+    const {openSignIn} = useClerk();
 
     // Preset quick phrases
     const quickPrompts = [
@@ -368,7 +370,10 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         e.preventDefault();
         
         try {
-            if(!user) return toast.error('Login to send message');
+            if(!user) {
+                openSignIn();
+                return;
+            }
             if(isLoading) return toast.error('Wait for the previous prompt response');
             if(!contentToSend.trim()) return; // If no input content, do nothing
             
