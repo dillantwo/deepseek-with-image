@@ -1,8 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 设置应用的基础路径为 /agent
-  basePath: '/agent',
-  
+  experimental: {
+    // 增加 API 路由的請求體大小限制
+    bodyParser: {
+      sizeLimit: '50mb',
+    },
+  },
   // 增加服務器響應時間限制
   serverRuntimeConfig: {
     // Will only be available on the server side
@@ -11,6 +14,14 @@ const nextConfig = {
   publicRuntimeConfig: {
     // Will be available on both server and client
     staticFolder: '/static',
+  },
+  // 配置 API 路由
+  api: {
+    bodyParser: {
+      sizeLimit: '50mb',
+    },
+    responseLimit: '50mb',
+    externalResolver: true,
   },
 };
 
