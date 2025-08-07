@@ -12,8 +12,8 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "FirstChat - GreatStack",
-  description: "Full Stack Project",
+  title: "FirstChat",
+  description: "QEF FirstChat",
 };
 
 export default function RootLayout({ children }) {
