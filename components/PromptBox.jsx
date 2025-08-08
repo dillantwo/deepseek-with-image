@@ -29,6 +29,7 @@ const PromptBox = ({setIsLoading, isLoading}) => {
         { text: "Let's learn", content: "Let's learn！" },
         { text: 'Please recommend', content: 'Please recommend！' },
         { text: 'Please continue', content: 'Please continue ' },
+        { text: 'Ask question', content: 'I have a question？' },
         { text: 'Free to chat', content: 'Free to chat ' }
     ];
 
@@ -512,7 +513,8 @@ const PromptBox = ({setIsLoading, isLoading}) => {
             // Optimized streaming effect - fix state update issues and add cleanup mechanism
             const streamMessage = (fullContent) => {
                 streamingRef.current = true; // Start streaming
-                const chars = fullContent.split('');
+                // Use Array.from to properly handle Unicode characters including Chinese characters
+                const chars = Array.from(fullContent);
                 let currentIndex = 0;
                 const baseSpeed = 20; // Slightly slower to reduce frequent updates
                 
@@ -557,9 +559,9 @@ const PromptBox = ({setIsLoading, isLoading}) => {
                         let delay = baseSpeed;
                         const currentChar = chars[currentIndex - 1];
                         
-                        if (currentChar === '.' || currentChar === '!' || currentChar === '?') {
-                            delay = baseSpeed * 2; // Brief pause after period
-                        } else if (currentChar === ',' || currentChar === ';') {
+                        if (currentChar === '.' || currentChar === '!' || currentChar === '?' || currentChar === '？' || currentChar === '！') {
+                            delay = baseSpeed * 2; // Brief pause after punctuation marks
+                        } else if (currentChar === ',' || currentChar === ';' || currentChar === '，' || currentChar === '；') {
                             delay = baseSpeed * 1.5; // Light pause after comma
                         } else if (currentChar === ' ') {
                             delay = baseSpeed * 0.8; // Slightly faster for spaces
@@ -572,7 +574,19 @@ const PromptBox = ({setIsLoading, isLoading}) => {
                         
                         setTimeout(typeNextChunk, delay);
                     } else {
+                        // Ensure the complete message is displayed before stopping
                         streamingRef.current = false;
+                        
+                        // Final update to ensure the complete content is displayed
+                        setSelectedChat((prev) => {
+                            if (!prev) return prev;
+                            
+                            const updatedMessages = [
+                                ...prev.messages.slice(0, -1),
+                                { ...assistantMessage, content: fullContent }
+                            ];
+                            return { ...prev, messages: updatedMessages };
+                        });
                     }
                 };
                 
@@ -682,6 +696,9 @@ const PromptBox = ({setIsLoading, isLoading}) => {
             )}
             {item.text === 'Please continue' && (
               <Image src={assets.regenerate_icon} alt="" className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
+            )}
+            {item.text === 'Ask question' && (
+              <span className="text-sm opacity-70 group-hover:opacity-100 transition-opacity">？</span>
             )}
             {item.text === 'Free to chat' && (
               <Image src={assets.chat_icon} alt="" className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
